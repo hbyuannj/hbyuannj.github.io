@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金姆森太太遇害案 - 解谜程序</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        detective: {
+                            dark: '#1a202c',
+                            medium: '#4a5568',
+                            light: '#e2e8f0',
+                            accent: '#ed8936'
+                        }
+                    },
+                    fontFamily: {
+                        detective: ['Georgia', 'Cambria', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            .card-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .fade-in {
+                animation: fadeIn 1s ease forwards;
+                opacity: 0;
+            }
+            .slide-up {
+                animation: slideUp 0.8s ease forwards;
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            .highlight {
+                animation: highlight 1.5s ease infinite;
+            }
+            .question-box {
+                border-left: 4px solid #3182ce;
+            }
+            .answer-box {
+                border-left: 4px solid #38a169;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { 
+                    transform: translateY(20px);
+                    opacity: 0;
+                }
+                to { 
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes highlight {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(237, 137, 54, 0.4); }
+                50% { box-shadow: 0 0 0 8px rgba(237, 137, 54, 0); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-detective text-gray-800">
+    <!-- 页面头部 -->
+    <header class="bg-detective-dark text-white py-8 px-4 md:px-8">
+        <div class="container mx-auto text-center">
+            <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-shadow mb-2">金姆森太太遇害案逻辑推理</h1>
+            <p class="text-detective-light text-[clamp(1rem,2vw,1.2rem)]">一个考验观察力与逻辑推理的侦探谜题</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+        <!-- 题干区域 -->
+        <section id="question" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 0.2s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-file-text-o mr-3 text-detective-accent"></i><strong>案件描述</strong>
+            </h2>
+            <div class="prose max-w-none">
+                <p class="mb-4">有一天上午，杰克和约翰去看望住在郊区别墅的金姆森太太。平常他们要进去都要按门铃，今天的门却是虚掩着的。</p>
+                <p class="mb-4">杰克和约翰推开门进去，在一楼餐厅里发现了金姆森太太的尸体，看上去，她已经遇害十多天了。她是在用餐的时候遭到突然袭击的，一柄尖刀贯穿胸口，瞬间夺去了她的生命。凶手随后洗劫了整幢别墅。</p>
+                <p class="mb-4">杰克和约翰伤感地坐在别墅前面的台阶上，送来的报纸堆满了整级台阶，而订阅它的人永远不会再读报了。别墅的台阶下，还放着两瓶早已过期的牛奶，也是金姆森太太定的。</p>
+                <p>聪明的杰克看到以后，花了5秒的时间就知道了凶手是谁。你知道吗？</p>
+            </div>
+        </section>
+
+        <!-- 解题思路区域 -->
+        <section id="approach" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 0.4s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-lightbulb-o mr-3 text-detective-accent"></i>解题思路
+            </h2>
+            <p class="text-lg">破解此案的关键在于分析两个日常配送物品的状态差异，通过对比推理出谁知晓金姆森太太已遇害的事实：</p>
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+                <div class="bg-gray-50 p-5 rounded-lg border-l-4 border-blue-500 card-hover">
+                    <h3 class="font-bold text-lg mb-2">报纸的状态</h3>
+                    <p>报纸堆满了整级台阶，说明送报人持续送报十多天，不知道金姆森太太已经遇害。</p>
+                </div>
+                <div class="bg-gray-50 p-5 rounded-lg border-l-4 border-red-500 card-hover">
+                    <h3 class="font-bold text-lg mb-2">牛奶的状态</h3>
+                    <p>只有两瓶过期牛奶，说明送奶人仅送了两天就停止了配送，暗示他知道金姆森太太已无法取奶。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 推理过程演示 -->
+        <section id="deduction" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 0.6s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-search mr-3 text-detective-accent"></i>推理过程演示
+            </h2>
+            
+            <div class="mb-8">
+                <div id="animation-container" class="relative h-64 md:h-80 bg-gray-100 rounded-lg overflow-hidden mb-6">
+                    <!-- 别墅台阶背景 -->
+                    <div class="absolute inset-0 bg-gray-200">
+                        <div class="absolute bottom-0 left-0 right-0 h-40 bg-gray-400" id="steps"></div>
+                        <!-- 台阶线条 -->
+                        <div class="absolute bottom-10 left-0 right-0 h-1 bg-gray-500"></div>
+                        <div class="absolute bottom-20 left-0 right-0 h-1 bg-gray-500"></div>
+                        <div class="absolute bottom-30 left-0 right-0 h-1 bg-gray-500"></div>
+                    </div>
+                    
+                    <!-- 报纸堆 - 初始隐藏，逐步显示 -->
+                    <div id="newspapers" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 w-24 h-20 bg-gray-800 rounded-sm opacity-0">
+                        <div class="absolute top-1 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-3 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-5 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-7 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-9 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-11 left-1 right-1 h-1 bg-gray-700"></div>
+                        <div class="absolute top-13 left-1 right-1 h-1 bg-gray-700"></div>
+                    </div>
+                    
+                    <!-- 牛奶瓶 - 初始隐藏，逐步显示 -->
+                    <div id="milk1" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 -translate-x-10 w-6 h-10 bg-white rounded-t-full border-2 border-gray-300 opacity-0">
+                        <div class="absolute top-1 left-1 right-1 h-1 bg-blue-100 rounded-full"></div>
+                    </div>
+                    <div id="milk2" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 translate-x-4 w-6 h-10 bg-white rounded-t-full border-2 border-gray-300 opacity-0">
+                        <div class="absolute top-1 left-1 right-1 h-1 bg-blue-100 rounded-full"></div>
+                    </div>
+                    
+                    <!-- 人物 - 初始隐藏 -->
+                    <div id="jack" class="absolute bottom-40 left-1/4 w-12 h-20 opacity-0">
+                        <div class="w-full h-6 bg-yellow-500 rounded-full"></div>
+                        <div class="w-10 h-14 bg-blue-600 mx-auto rounded-t-lg"></div>
+                    </div>
+                    <div id="john" class="absolute bottom-40 right-1/4 w-12 h-20 opacity-0">
+                        <div class="w-full h-6 bg-yellow-500 rounded-full"></div>
+                        <div class="w-10 h-14 bg-green-600 mx-auto rounded-t-lg"></div>
+                    </div>
+                    
+                    <!-- 思考泡泡 - 初始隐藏 -->
+                    <div id="thought-bubble" class="absolute bottom-60 left-1/4 w-24 h-20 bg-white rounded-full p-3 shadow-lg opacity-0">
+                        <div class="absolute bottom-0 left-1/2 transform translate-x-1/2 translate-y-1/2 w-6 h-6 bg-white rotate-45"></div>
+                        <div id="bubble-content" class="text-xs text-center"></div>
+                    </div>
+                </div>
+                
+                <!-- 控制按钮 -->
+                <div class="flex justify-center gap-4">
+                    <button id="start-animation" class="bg-detective-accent hover:bg-detective-dark text-white font-bold py-2 px-6 rounded-full transition duration-300 flex items-center">
+                        <i class="fa fa-play mr-2"></i>开始推理
+                    </button>
+                    <button id="reset-animation" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full transition duration-300 flex items-center" disabled>
+                        <i class="fa fa-refresh mr-2"></i>重新开始
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 推理步骤 -->
+            <div class="space-y-6">
+                <div class="step-item border-l-4 border-detective-accent pl-4 py-2 slide-up" style="animation-delay: 0.2s">
+                    <h3 class="text-xl font-bold">步骤1：观察现场线索</h3>
+                    <p>杰克和约翰发现金姆森太太遇害，死亡时间约十多天。别墅外有两个关键线索：堆满台阶的报纸和只有两瓶过期的牛奶。</p>
+                </div>
+                
+                <div class="step-item border-l-4 border-detective-accent pl-4 py-2 slide-up" style="animation-delay: 0.4s">
+                    <h3 class="text-xl font-bold">步骤2：分析报纸配送情况</h3>
+                    <p>报纸堆满了整级台阶，说明送报人在这十多天里持续送报。这表明送报人不知道金姆森太太已经遇害，仍按常规进行配送。</p>
+                </div>
+                
+                <div class="step-item border-l-4 border-detective-accent pl-4 py-2 slide-up" style="animation-delay: 0.6s">
+                    <h3 class="text-xl font-bold">步骤3：分析牛奶配送情况</h3>
+                    <p>只有两瓶过期牛奶，说明送奶人只送了两天就停止了配送。这一反常行为暗示送奶人知道金姆森太太已经无法取牛奶，因此停止了配送。</p>
+                </div>
+                
+                <div class="step-item border-l-4 border-detective-accent pl-4 py-2 slide-up" style="animation-delay: 0.8s">
+                    <h3 class="text-xl font-bold">步骤4：对比推理</h3>
+                    <p>送报人持续送报，说明他不知情；送奶人提前停止送奶，说明他知情。在正常情况下，配送人员不会知道客户的生死，除非他与案件有关。</p>
+                </div>
+                
+                <div class="step-item border-l-4 border-detective-accent pl-4 py-2 slide-up" style="animation-delay: 1s">
+                    <h3 class="text-xl font-bold">步骤5：得出结论</h3>
+                    <p>送奶人是唯一知晓金姆森太太已遇害的配送人员，因此他最有可能是凶手。他在作案后继续送了两天牛奶以伪装正常，随后停止配送，暴露了自己的罪行。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 质疑与解答区域 -->
+        <section id="questions-answers" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 0.9s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-comments mr-3 text-detective-accent"></i>质疑与解答
+            </h2>
+            
+            <div class="space-y-8">
+                <!-- 第一个问题与解答 -->
+                <div>
+                    <div class="question-box bg-blue-50 p-5 rounded-r-lg mb-4">
+                        <h3 class="text-xl font-bold text-blue-800 mb-2">提问1：送奶人为什么在杀死金姆森太太后，又连续送了两天牛奶呢？</h3>
+                    </div>
+                    <div class="answer-box bg-green-50 p-5 rounded-r-lg">
+                        <h3 class="text-xl font-bold text-green-800 mb-2">解答：</h3>
+                        <p class="mb-3">核心结论：送奶人连续送两天牛奶，是为了<strong>伪装正常状态、延迟案发时间</strong>。</p>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li>避免立刻暴露嫌疑：如果杀人后马上停止送奶，结合送报人持续送报的行为，会形成明显反差，容易让人怀疑“送奶人知道住户出事了”。</li>
+                            <li>模拟正常停送逻辑：连续送两天再停止，会让人误以为是“送奶人发现多日无人取奶，以为住户出门”，符合日常配送的常规操作，降低自身嫌疑。</li>
+                            <li>掩盖作案时间：延迟案发能让现场痕迹进一步模糊，给凶手留出更充足的时间处理作案相关的证据或逃离。</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 第二个问题与解答 -->
+                <div>
+                    <div class="question-box bg-blue-50 p-5 rounded-r-lg mb-4">
+                        <h3 class="text-xl font-bold text-blue-800 mb-2">提问2：要是我是送奶工的话，我会每天坚持送奶，这样岂不更好？</h3>
+                    </div>
+                    <div class="answer-box bg-green-50 p-5 rounded-r-lg">
+                        <h3 class="text-xl font-bold text-green-800 mb-2">解答：</h3>
+                        <p class="mb-3">这个想法很有洞察力！从表面看，持续送奶确实像更完美的伪装，但结合实际情况和凶手的核心诉求，反而会暴露更多破绽。</p>
+                        <p class="font-bold mb-2">核心结论：持续送奶反而风险更高，不如“送两天就停”隐蔽</p>
+                        <ul class="list-disc pl-6 space-y-2 mt-3">
+                            <li><strong>牛奶的特性决定无法长期堆积</strong>：牛奶有保质期，且变质后会产生异味、膨胀渗漏。如果持续送奶，十多天后台阶上会堆满数十瓶变质牛奶，不仅容易引起路人注意（加速案发），还会留下“送奶人明知无人取奶仍持续配送”的明显异常。</li>
+                            <li><strong>违背配送行业的基本逻辑</strong>：送奶、送报虽都是配送，但牛奶是“即时消耗品”，通常默认“无人取奶3天以上就暂停配送”（避免浪费和纠纷）；而报纸是“信息载体”，默认“订阅期间持续配送”。持续送奶会打破这个行业共识，反而凸显“送奶人在刻意伪装”。</li>
+                            <li><strong>增加凶手的暴露风险</strong>：持续送奶意味着凶手要每天往返案发现场，次数越多，被邻居、路人目击的概率越大，还可能在现场留下更多痕迹（如指纹、脚印）。</li>
+                            <li><strong>伪装的“度”难以把握</strong>：送两天再停，符合“发现无人取奶后暂停”的正常流程；但持续送十多天，完全超出合理范畴，反而会让后续调查者重点怀疑“为什么只有送奶人无视‘无人取货’的信号”。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 结论区域 -->
+        <section id="conclusion" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 1s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-gavel mr-3 text-detective-accent"></i>案件结论
+            </h2>
+            <div class="bg-gray-50 p-6 rounded-lg border-2 border-detective-accent text-center highlight">
+                <h3 class="text-2xl font-bold mb-4 text-detective-dark">凶手是送牛奶的人</h3>
+                <p class="text-lg">送奶人知道金姆森太太已经遇害，因此在送了两天牛奶后就停止了配送，而送报人不知情，持续送报十多天。这种信息差暴露了送奶人的罪行。</p>
+            </div>
+        </section>
+
+        <!-- 规律总结 -->
+        <section id="summary" class="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in" style="animation-delay: 1.1s">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-detective-dark flex items-center">
+                <i class="fa fa-book mr-3 text-detective-accent"></i>推理规律总结
+            </h2>
+            <div class="space-y-4">
+                <div class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 bg-detective-accent text-white rounded-full flex items-center justify-center mr-4">1</div>
+                    <div>
+                        <h3 class="font-bold text-lg">关注异常行为</h3>
+                        <p>在看似正常的场景中，异常行为往往是破案关键。送奶人停止送奶的行为与送报人形成对比，成为突破口。</p>
+                    </div>
+                </div>
+                
+                <div class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 bg-detective-accent text-white rounded-full flex items-center justify-center mr-4">2</div>
+                    <div>
+                        <h3 class="font-bold text-lg">信息差分析</h3>
+                        <p>谁拥有不该拥有的信息？本案中送奶人知道了他不应该知道的信息（金姆森太太已死），从而暴露了身份。</p>
+                    </div>
+                </div>
+                
+                <div class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 bg-detective-accent text-white rounded-full flex items-center justify-center mr-4">3</div>
+                    <div>
+                        <h3 class="font-bold text-lg">日常规律对比</h3>
+                        <p>通过对比不同人的日常行为模式，可以发现不符合常规的地方。正常情况下，送奶人和送报人应具有相似的行为模式。</p>
+                    </div>
+                </div>
+                
+                <div class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 bg-detective-accent text-white rounded-full flex items-center justify-center mr-4">4</div>
+                    <div>
+                        <h3 class="font-bold text-lg">凶手的伪装心理</h3>
+                        <p>凶手往往会试图伪装正常以逃避嫌疑，如本案中送奶人继续送了两天牛奶，但这种伪装通常会留下破绽。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-detective-dark text-white py-6 px-4">
+        <div class="container mx-auto text-center">
+            <p>侦探谜题解谜程序 &copy; 2023</p>
+            <p class="text-sm text-detective-light mt-2">通过逻辑推理与细节观察破解案件</p>
+        </div>
+    </footer>
+
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取元素
+            const startBtn = document.getElementById('start-animation');
+            const resetBtn = document.getElementById('reset-animation');
+            const newspapers = document.getElementById('newspapers');
+            const milk1 = document.getElementById('milk1');
+            const milk2 = document.getElementById('milk2');
+            const jack = document.getElementById('jack');
+            const john = document.getElementById('john');
+            const thoughtBubble = document.getElementById('thought-bubble');
+            const bubbleContent = document.getElementById('bubble-content');
+            
+            // 动画状态
+            let isAnimating = false;
+            
+            // 开始动画
+            startBtn.addEventListener('click', function() {
+                if (isAnimating) return;
+                isAnimating = true;
+                startBtn.disabled = true;
+                resetBtn.disabled = false;
+                
+                // 逐步显示动画元素
+                setTimeout(() => {
+                    // 显示人物
+                    jack.style.opacity = '1';
+                    jack.style.transition = 'opacity 1s ease';
+                    john.style.opacity = '1';
+                    john.style.transition = 'opacity 1s ease';
+                }, 500);
+                
+                setTimeout(() => {
+                    // 显示报纸
+                    newspapers.style.opacity = '1';
+                    newspapers.style.transition = 'opacity 1s ease';
+                    bubbleContent.textContent = "看，报纸堆了这么多...";
+                    thoughtBubble.style.opacity = '1';
+                    thoughtBubble.style.transition = 'opacity 1s ease';
+                }, 2000);
+                
+                setTimeout(() => {
+                    // 显示牛奶
+                    milk1.style.opacity = '1';
+                    milk1.style.transition = 'opacity 1s ease';
+                    setTimeout(() => {
+                        milk2.style.opacity = '1';
+                        milk2.style.transition = 'opacity 1s ease';
+                    }, 500);
+                    bubbleContent.textContent = "但牛奶只有两瓶...";
+                }, 4000);
+                
+                setTimeout(() => {
+                    // 最终思考
+                    bubbleContent.textContent = "我知道了！是送奶人！";
+                    // 高亮牛奶瓶
+                    milk1.classList.add('highlight');
+                    milk2.classList.add('highlight');
+                }, 6000);
+                
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 8000);
+            });
+            
+            // 重置动画
+            resetBtn.addEventListener('click', function() {
+                // 重置所有元素状态
+                newspapers.style.opacity = '0';
+                milk1.style.opacity = '0';
+                milk2.style.opacity = '0';
+                jack.style.opacity = '0';
+                john.style.opacity = '0';
+                thoughtBubble.style.opacity = '0';
+                milk1.classList.remove('highlight');
+                milk2.classList.remove('highlight');
+                
+                // 重置按钮状态
+                startBtn.disabled = false;
+                resetBtn.disabled = true;
+                isAnimating = false;
+            });
+        });
+    </script>
+</body>
+</html>

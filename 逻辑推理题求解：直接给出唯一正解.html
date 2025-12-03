@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逻辑推理题求解 - 老实人与骗子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        honest: '#10B981',
+                        liar: '#EF4444',
+                        neutral: '#6B7280',
+                        background: '#F3F4F6',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .step-active {
+                @apply ring-2 ring-primary ring-offset-2;
+            }
+            .person-honest {
+                @apply bg-honest/10 border-honest text-honest;
+            }
+            .person-liar {
+                @apply bg-liar/10 border-liar text-liar;
+            }
+            .statement-true {
+                @apply text-honest font-medium;
+            }
+            .statement-false {
+                @apply text-liar font-medium;
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .highlight {
+                animation: highlight 1.5s infinite;
+            }
+            @keyframes highlight {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+                50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 标题区域 -->
+        <header class="text-center mb-10">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">逻辑推理题求解</h1>
+            <p class="text-gray-600">老实人与骗子的判断</p>
+        </header>
+
+        <!-- 题干区域 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8 fade-in">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fa fa-file-text-o text-primary mr-2"></i>题干
+            </h2>
+            <div class="pl-2">
+                <p class="mb-3">甲、乙、丙、丁、戊5个人当中，有2个人是从来不说谎的老实人，但是另外3个人总是爱说谎。</p>
+                <p class="mb-2 font-medium">下面是他们所说的话：</p>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>甲：“乙是骗子。”</li>
+                    <li>乙：“丙是骗子。”</li>
+                    <li>丙：“戊是骗子。”</li>
+                    <li>丁：“甲和乙都是骗子。”</li>
+                    <li>戊：“甲和丁都是老实人。”</li>
+                </ul>
+                <p class="mt-3">根据以上的对话，请找出老实人是哪两位？</p>
+            </div>
+        </section>
+
+        <!-- 解题思路 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8 fade-in" style="animation-delay: 0.2s">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fa fa-lightbulb-o text-primary mr-2"></i>解题思路
+            </h2>
+            <p class="mb-2">本题可通过假设验证法求解，关键在于从矛盾点突破，逐步推理：</p>
+            <ol class="list-decimal pl-6 space-y-1">
+                <li>从戊的陈述入手，因其陈述涉及两人，容易产生矛盾</li>
+                <li>假设某人是老实人或骗子，验证是否符合"2个老实人，3个骗子"的条件</li>
+                <li>若产生矛盾，则假设不成立，反之则成立</li>
+                <li>逐步推导，确定每个人的身份</li>
+            </ol>
+        </section>
+
+        <!-- 人物展示区 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8 fade-in" style="animation-delay: 0.4s">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fa fa-users text-primary mr-2"></i>人物与陈述
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="persons-container">
+                <!-- 人物卡片将通过JS动态生成 -->
+            </div>
+        </section>
+
+        <!-- 推理过程演示 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8 fade-in" style="animation-delay: 0.6s">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fa fa-step-forward text-primary mr-2"></i>推理过程演示
+                </h2>
+                <div class="flex gap-2">
+                    <button id="restart-btn" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition flex items-center">
+                        <i class="fa fa-refresh mr-1"></i> 重新开始
+                    </button>
+                    <button id="next-btn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition flex items-center">
+                        <i class="fa fa-arrow-right mr-1"></i> 下一步
+                    </button>
+                </div>
+            </div>
+            <div id="reasoning-steps" class="space-y-6">
+                <div class="step-item hidden" data-step="1">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <h3 class="font-bold text-lg mb-2">步骤 1：分析戊的陈述</h3>
+                        <p>戊说："甲和丁都是老实人。"</p>
+                        <p class="mt-2">假设戊是老实人，那么甲和丁也必须是老实人，这样就会有3个老实人（甲、丁、戊），与"只有2个老实人"的条件矛盾。</p>
+                        <p class="mt-2 font-medium statement-false">结论：戊一定是骗子</p>
+                    </div>
+                </div>
+                
+                <div class="step-item hidden" data-step="2">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <h3 class="font-bold text-lg mb-2">步骤 2：分析丙的陈述</h3>
+                        <p>丙说："戊是骗子。"</p>
+                        <p class="mt-2">我们已经确定戊是骗子，所以丙的陈述是真实的。</p>
+                        <p class="mt-2 font-medium statement-true">结论：丙是老实人</p>
+                    </div>
+                </div>
+                
+                <div class="step-item hidden" data-step="3">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <h3 class="font-bold text-lg mb-2">步骤 3：分析乙的陈述</h3>
+                        <p>乙说："丙是骗子。"</p>
+                        <p class="mt-2">我们已经确定丙是老实人，所以乙的陈述是虚假的。</p>
+                        <p class="mt-2 font-medium statement-false">结论：乙是骗子</p>
+                    </div>
+                </div>
+                
+                <div class="step-item hidden" data-step="4">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <h3 class="font-bold text-lg mb-2">步骤 4：分析甲的陈述</h3>
+                        <p>甲说："乙是骗子。"</p>
+                        <p class="mt-2">我们已经确定乙是骗子，所以甲的陈述是真实的。</p>
+                        <p class="mt-2 font-medium statement-true">结论：甲是老实人</p>
+                    </div>
+                </div>
+                
+                <div class="step-item hidden" data-step="5">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <h3 class="font-bold text-lg mb-2">步骤 5：分析丁的陈述</h3>
+                        <p>丁说："甲和乙都是骗子。"</p>
+                        <p class="mt-2">我们已经确定甲是老实人，乙是骗子，所以丁的陈述是虚假的（因为甲不是骗子）。</p>
+                        <p class="mt-2 font-medium statement-false">结论：丁是骗子</p>
+                    </div>
+                </div>
+                
+                <div class="step-item hidden" data-step="6">
+                    <div class="p-4 bg-green-50 rounded-lg border border-green-100">
+                        <h3 class="font-bold text-lg mb-2">最终结论</h3>
+                        <p class="mt-2">经过推理，我们确定：</p>
+                        <ul class="list-disc pl-6 mt-2 space-y-1">
+                            <li class="statement-true">老实人：甲、丙</li>
+                            <li class="statement-false">骗子：乙、丁、戊</li>
+                        </ul>
+                        <p class="mt-2">此结果符合"2个老实人，3个骗子"的条件，且所有人的陈述都与他们的身份相符。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 规律总结 -->
+        <section class="bg-white rounded-xl shadow-md p-6 mb-8 fade-in" style="animation-delay: 0.8s">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fa fa-book text-primary mr-2"></i>规律总结
+            </h2>
+            <div class="space-y-3">
+                <p>这类逻辑推理题（老实人与骗子）通常遵循以下规律：</p>
+                <ol class="list-decimal pl-6 space-y-2">
+                    <li><span class="font-medium">寻找突破口</span>：优先选择涉及人数较多或容易产生矛盾的陈述作为推理起点</li>
+                    <li><span class="font-medium">假设验证法</span>：先假设某人是老实人或骗子，然后验证是否符合所有条件</li>
+                    <li><span class="font-medium">矛盾排除法</span>：若假设导致矛盾，则该假设不成立，需换一种假设</li>
+                    <li><span class="font-medium">闭环验证</span>：推理完成后，需验证所有结论是否自洽，是否符合初始条件</li>
+                    <li><span class="font-medium">数量约束</span>：本题中"2个老实人，3个骗子"的数量限制是重要的验证依据</li>
+                </ol>
+                <p>掌握这些规律可以帮助快速解决类似的逻辑推理问题。</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 人物数据
+        const persons = [
+            { id: 'a', name: '甲', statement: '乙是骗子。', status: 'unknown' },
+            { id: 'b', name: '乙', statement: '丙是骗子。', status: 'unknown' },
+            { id: 'c', name: '丙', statement: '戊是骗子。', status: 'unknown' },
+            { id: 'd', name: '丁', statement: '甲和乙都是骗子。', status: 'unknown' },
+            { id: 'e', name: '戊', statement: '甲和丁都是老实人。', status: 'unknown' }
+        ];
+
+        // 当前步骤
+        let currentStep = 0;
+        const totalSteps = 6;
+
+        // 初始化人物卡片
+        function initPersons() {
+            const container = document.getElementById('persons-container');
+            container.innerHTML = '';
+            
+            persons.forEach(person => {
+                const card = document.createElement('div');
+                card.id = `person-${person.id}`;
+                card.className = 'border rounded-lg p-4 flex items-start hover:shadow-md transition person-unknown';
+                card.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-lg mr-3 flex-shrink-0">${person.name}</div>
+                    <div>
+                        <p class="font-medium">${person.name}说：</p>
+                        <p class="text-gray-700">"${person.statement}"</p>
+                        <p class="mt-2 text-sm font-medium text-neutral">状态：待确定</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 更新人物状态显示
+        function updatePersonStatus(id, status) {
+            const person = persons.find(p => p.id === id);
+            if (person) {
+                person.status = status;
+                const card = document.getElementById(`person-${id}`);
+                
+                // 移除所有状态类
+                card.classList.remove('person-unknown', 'person-honest', 'person-liar', 'highlight');
+                
+                // 添加新状态类
+                if (status === 'honest') {
+                    card.classList.add('person-honest');
+                    card.querySelector('p:last-child').textContent = '状态：老实人';
+                } else if (status === 'liar') {
+                    card.classList.add('person-liar');
+                    card.querySelector('p:last-child').textContent = '状态：骗子';
+                }
+                
+                // 添加高亮动画
+                card.classList.add('highlight');
+                setTimeout(() => {
+                    card.classList.remove('highlight');
+                }, 2000);
+            }
+        }
+
+        // 显示下一步
+        function showNextStep() {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                
+                // 隐藏所有步骤
+                document.querySelectorAll('.step-item').forEach(item => {
+                    item.classList.add('hidden');
+                });
+                
+                // 显示当前步骤
+                const currentStepElement = document.querySelector(`.step-item[data-step="${currentStep}"]`);
+                if (currentStepElement) {
+                    currentStepElement.classList.remove('hidden');
+                    currentStepElement.classList.add('fade-in');
+                    
+                    // 根据步骤更新人物状态
+                    switch(currentStep) {
+                        case 1:
+                            updatePersonStatus('e', 'liar'); // 戊是骗子
+                            break;
+                        case 2:
+                            updatePersonStatus('c', 'honest'); // 丙是老实人
+                            break;
+                        case 3:
+                            updatePersonStatus('b', 'liar'); // 乙是骗子
+                            break;
+                        case 4:
+                            updatePersonStatus('a', 'honest'); // 甲是老实人
+                            break;
+                        case 5:
+                            updatePersonStatus('d', 'liar'); // 丁是骗子
+                            break;
+                    }
+                }
+                
+                // 如果是最后一步，禁用下一步按钮
+                if (currentStep === totalSteps) {
+                    document.getElementById('next-btn').disabled = true;
+                    document.getElementById('next-btn').classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        // 重新开始
+        function restart() {
+            currentStep = 0;
+            document.querySelectorAll('.step-item').forEach(item => {
+                item.classList.add('hidden');
+            });
+            
+            // 重置所有人状态
+            persons.forEach(person => {
+                const card = document.getElementById(`person-${person.id}`);
+                card.className = 'border rounded-lg p-4 flex items-start hover:shadow-md transition person-unknown';
+                card.querySelector('p:last-child').textContent = '状态：待确定';
+                person.status = 'unknown';
+            });
+            
+            // 启用下一步按钮
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initPersons();
+            
+            // 绑定按钮事件
+            document.getElementById('next-btn').addEventListener('click', showNextStep);
+            document.getElementById('restart-btn').addEventListener('click', restart);
+        });
+    </script>
+</body>
+</html>
