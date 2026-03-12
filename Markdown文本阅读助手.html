@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>Markdown文本阅读助手</title>
+    <!-- 引入marked CDN（Markdown解析器） -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- 引入MathJax CDN（公式渲染库），配置核心参数 -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script>
+        // MathJax 核心配置（关键：指定公式分隔符、渲染格式等）
+        window.MathJax = {
+            tex: {
+                // 启用行内公式分隔符：$...$（默认可能关闭，需手动开启）
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                // 启用块级公式分隔符：$$...$$
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                // 支持LaTeX常用扩展（如amsmath、amssymb，复杂公式必备）
+                packages: {'[+]': ['amsmath', 'amssymb']}
+            },
+            chtml: {
+                // 公式缩放比例（默认1，可根据网页样式调整）
+                scale: 1.1,
+                // 公式与周围文本的间距
+                displayAlign: 'center' // 块级公式居中对齐
+            },
+            options: {
+                // 忽略公式中的HTML标签，避免安全风险
+                ignoreHtmlClass: 'tex2jax_ignore',
+                // 自动渲染页面中的公式（无需手动调用渲染方法）
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <style>
+        /* CSS 变量定义
+         * 用途：集中管理常用样式值，提高代码可维护性和一致性
+         */
+        :root {
+            --primary-font: "微软雅黑", "思源黑体", sans-serif;  /* 主要字体族 */
+            --primary-color: #2d3436;                           /* 主要文字颜色 */
+            --background-color: #f0f8ff;                        /* 页面背景颜色 */
+            --card-bg-light: #fffde7;                           /* 浅色卡片背景 */
+            --border-radius: 8px;                               /* 标准边框半径 */
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);        /* 标准阴影效果 */
+        }
+
+        /* 全局重置样式
+         * 用途：重置浏览器默认样式，确保跨浏览器一致性
+         */
+        * {
+            margin: 0;           /* 重置外边距 */
+            padding: 0;          /* 重置内边距 */
+            box-sizing: border-box;  /* 盒模型设置为border-box，便于布局计算 */
+        }
+
+        /* 页面主体样式
+         * 用途：设置整个页面的基本样式
+         */
+        body {
+            font-family: var(--primary-font);  /* 使用主要字体族 */
+            background-color: var(--background-color);  /* 使用背景颜色变量 */
+            padding: 20px;       /* 页面内边距 */
+            line-height: 1.5;    /* 行高设置 */
+            color: #1a1a2e;      /* 文字颜色 */
+            font-size: 20px;      /* 基础字体大小 */
+            overflow-x: hidden;  /* 防止出现水平滚动条 */
+        }
+
+        /* 页面标题容器样式
+         * 用途：设置页面标题区域的布局
+         */
+        .page-header {
+            display: flex;              /* 使用flex布局 */
+            justify-content: center;     /* 居中对齐标题 */
+            align-items: center;         /* 垂直居中对齐 */
+            width: 100%;                 /* 宽度100% */
+            max-width: 1200px;           /* 最大宽度限制 */
+            margin: 0 auto 30px;         /* 居中显示，下方外边距30px */
+            position: relative;          /* 相对定位，为返回按钮的绝对定位做准备 */
+            padding: 0 20px;             /* 左右内边距，增加可读性 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+        }
+
+        /* 页面标题样式
+         * 用途：设置页面主标题的样式
+         */
+        .page-title {
+            font-size: 36px;            /* 标题字体大小 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+            text-shadow: none;          /* 无文字阴影 */
+            margin: 0;                  /* 无外边距 */
+        }
+
+        /* 固定浮动按钮容器
+         * 用途：用于放置固定的浮动按钮
+         */
+        .floating-buttons {
+            position: fixed;            /* 固定定位 */
+            bottom: 5px;                /* 距离底部5px */
+            right: 5px;                 /* 距离右侧5px */
+            display: flex;              /* 使用flex布局 */
+            flex-direction: column;     /* 垂直排列 */
+            gap: 15px;                  /* 按钮之间的间距 */
+            z-index: 1000;              /* 层级最高，确保显示在最上层 */
+        }
+
+        /* 固定浮动按钮样式
+         * 用途：设置固定浮动按钮的基本样式
+         */
+        .floating-btn {
+            width: 60px;                /* 按钮宽度 */
+            height: 60px;               /* 按钮高度 */
+            border-radius: 50%;         /* 圆形按钮 */
+            border: none;               /* 无边框 */
+            display: flex;              /* 使用flex布局 */
+            justify-content: center;    /* 水平居中 */
+            align-items: center;        /* 垂直居中 */
+            cursor: pointer;            /* 鼠标悬停时显示指针 */
+            font-size: 24px;            /* 图标大小 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);  /* 阴影效果 */
+            transition: all 0.3s ease;  /* 过渡效果 */
+        }
+
+        /* 返回按钮样式
+         * 用途：设置返回按钮的基本样式
+         */
+        .back-btn {
+            background-color: #007bff;   /* 蓝色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 返回按钮悬停效果
+         * 用途：设置返回按钮悬停时的样式
+         */
+        .back-btn:hover {
+            background-color: #0066cc;   /* 悬停时的深蓝色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(5deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 返回顶部按钮样式
+         * 用途：设置返回顶部按钮的基本样式
+         */
+        .top-btn {
+            background-color: #6c757d;   /* 灰色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 返回顶部按钮悬停效果
+         * 用途：设置返回顶部按钮悬停时的样式
+         */
+        .top-btn:hover {
+            background-color: #5a6268;   /* 悬停时的深灰色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(-5deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 加粗按钮样式
+         * 用途：设置加粗按钮的基本样式
+         */
+        .bold-btn {
+            background-color: #ff9800;   /* 橙色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 加粗按钮悬停效果
+         * 用途：设置加粗按钮悬停时的样式
+         */
+        .bold-btn:hover {
+            background-color: #f57c00;   /* 悬停时的深橙色背景 */
+            transform: translateY(-8px) scale(1.1);  /* 向上浮动和缩放效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 主题按钮样式
+         * 用途：设置主题按钮的基本样式
+         */
+        .theme-btn {
+            background-color: #9c27b0;   /* 紫色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 主题按钮悬停效果
+         * 用途：设置主题按钮悬停时的样式
+         */
+        .theme-btn:hover {
+            background-color: #7b1fa2;   /* 悬停时的深紫色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(10deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 字体大小按钮样式
+         * 用途：设置字体大小按钮的基本样式
+         */
+        .font-btn {
+            background-color: #e67e22;   /* 橙色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 字体大小按钮悬停效果
+         * 用途：设置字体大小按钮悬停时的样式
+         */
+        .font-btn:hover {
+            background-color: #d35400;   /* 悬停时的深橙色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(-10deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 导航栏切换按钮样式
+         * 用途：设置导航栏切换按钮的基本样式
+         */
+        .nav-toggle-btn {
+            background-color: #27ae60;   /* 绿色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 导航栏切换按钮悬停效果
+         * 用途：设置导航栏切换按钮悬停时的样式
+         */
+        .nav-toggle-btn:hover {
+            background-color: #219a52;   /* 悬停时的深绿色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(5deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 位置按钮样式
+         * 用途：设置位置按钮的基本样式
+         */
+        .position-btn {
+            background-color: #9b59b6;   /* 紫色背景 */
+            color: white;               /* 按钮文字颜色 */
+        }
+
+        /* 位置按钮悬停效果
+         * 用途：设置位置按钮悬停时的样式
+         */
+        .position-btn:hover {
+            background-color: #8e44ad;   /* 悬停时的深紫色背景 */
+            transform: translateY(-8px) scale(1.1) rotate(10deg);  /* 向上浮动、缩放和旋转效果 */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);  /* 增强阴影 */
+        }
+
+        /* 公式样式
+         * 用途：设置数学公式的基本样式
+         */
+        .formula {
+            padding: 0;                  /* 无内边距 */
+            border-radius: 0;            /* 无圆角 */
+            background-color: transparent;  /* 透明背景 */
+            border: none;               /* 无边框 */
+            font-weight: normal;        /* 正常字体粗细 */
+        }
+
+        /* 粗体公式样式
+         * 用途：设置粗体数学公式的样式
+         */
+        strong {
+            font-weight: bold;          /* 粗体 */
+            background-color: transparent;  /* 透明背景 */
+        }
+
+        /* 高亮样式
+         * 用途：设置词组高亮显示的样式
+         */
+        .highlight {
+            background-color: #ffff00;   /* 黄色背景 */
+            font-weight: bold;           /* 粗体 */
+            padding: 2px 4px;            /* 内边距 */
+            border-radius: 3px;          /* 圆角 */
+        }
+
+        /* 输入区域样式
+         * 用途：设置Markdown输入区域的样式
+         */
+        .input-section {
+            width: 100%;                 /* 宽度100% */
+            max-width: 1200px;           /* 最大宽度限制 */
+            margin: 0 auto 30px;         /* 居中显示，下方外边距30px */
+            background: #ffffff;         /* 白色背景 */
+            padding: 20px;               /* 内边距 */
+            border-radius: 15px;         /* 圆角 */
+            box-shadow: var(--box-shadow);  /* 使用阴影变量 */
+            transition: all 0.3s ease;   /* 所有属性的过渡效果 */
+            border: 1px solid #e9ecef;   /* 边框 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+        }
+
+        /* 拖放区域样式
+         * 用途：设置文件拖放到输入框时的样式
+         */
+        #markdown-input.drag-over {
+            background: rgba(0, 102, 204, 0.1);  /* 浅蓝色背景 */
+            box-shadow: 0 6px 16px rgba(0, 102, 204, 0.2);  /* 蓝色阴影 */
+            border: 2px dashed #007bff;  /* 蓝色虚线边框 */
+            color: #0066cc;              /* 蓝色文字 */
+        }
+
+        /* 输入区域标题样式
+         * 用途：设置输入区域标题的样式
+         */
+        .input-title {
+            font-size: 28px;             /* 标题字体大小 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+            margin-bottom: 15px;         /* 下方外边距 */
+        }
+
+        /* Markdown输入框样式
+         * 用途：设置Markdown文本输入框的样式
+         */
+        #markdown-input {
+            width: 100%;                 /* 宽度100% */
+            height: 320px;               /* 固定高度，比原来减小20% */
+            padding: 15px;               /* 内边距 */
+            border: 3px solid #0066cc;    /* 蓝色边框 */
+            border-radius: 10px;         /* 圆角 */
+            font-size: 18px;             /* 字体大小 */
+            resize: vertical;            /* 允许垂直调整大小 */
+            margin-bottom: 15px;         /* 下方外边距 */
+        }
+
+        /* 通用按钮基础样式
+         * 用途：设置所有按钮的基础样式
+         */
+        .btn {
+            padding: 12px 24px;          /* 按钮内边距 */
+            border: none;               /* 无边框 */
+            border-radius: var(--border-radius);  /* 使用圆角变量 */
+            font-family: var(--primary-font);  /* 使用主要字体族 */
+            font-size: 18px;             /* 字体大小 */
+            cursor: pointer;            /* 鼠标悬停时显示指针 */
+            margin-right: 10px;         /* 右侧外边距 */
+            transition: all 0.3s ease;   /* 所有属性的过渡效果 */
+        }
+
+        /* 上传按钮样式
+         * 用途：设置上传按钮的特定样式
+         */
+        .upload-btn {
+            background-color: #007bff;   /* 蓝色背景 */
+            color: #ffffff;              /* 白色文字 */
+        }
+
+        /* 生成按钮样式
+         * 用途：设置生成按钮的特定样式
+         */
+        .generate-btn {
+            background-color: #6c757d;   /* 灰色背景 */
+            color: #ffffff;              /* 白色文字 */
+        }
+
+        /* 保存按钮样式
+         * 用途：设置保存按钮的特定样式
+         */
+        .save-btn {
+            background-color: #28a745;   /* 绿色背景 */
+            color: #ffffff;              /* 白色文字 */
+        }
+
+        /* 清空按钮样式
+         * 用途：设置清空按钮的特定样式
+         */
+        .clear-btn {
+            background-color: #dc3545;   /* 红色背景 */
+            color: #ffffff;              /* 白色文字 */
+        }
+
+        /* 按钮悬停效果
+         * 用途：设置所有按钮悬停时的样式
+         */
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);  /* 向上移动2px */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);  /* 阴影效果 */
+        }
+
+        /* 按钮禁用状态
+         * 用途：设置按钮禁用时的样式
+         */
+        .btn:disabled {
+            opacity: 0.6;               /* 透明度降低 */
+            cursor: not-allowed;        /* 鼠标显示禁止符号 */
+            pointer-events: none;       /* 禁止点击事件 */
+        }
+
+        /* 提示信息样式
+         * 用途：设置使用提示区域的样式
+         */
+        .tips {
+            background-color: #e9ecef;   /* 浅灰色背景 */
+            border-left: 5px solid #6c757d;  /* 左侧灰色边框 */
+            margin-top: 15px;           /* 上方外边距 */
+            font-size: 18px;             /* 字体大小 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+            padding: 10px;               /* 内边距 */
+            border-radius: var(--border-radius);  /* 使用圆角变量 */
+        }
+
+        /* 预览区域样式
+         * 用途：设置预览区域的布局样式
+         */
+        .preview-section {
+            width: 100%;                 /* 宽度100%，基于整个网页宽度 */
+            max-width: 100%;              /* 最大宽度限制为100%，避免超出屏幕 */
+            margin: 0 0 20px 0;           /* 左对齐，下方外边距 */
+            display: none;               /* 默认隐藏 */
+            flex-direction: row;         /* 水平排列子元素 */
+            flex-wrap: nowrap;            /* 不允许换行，确保布局紧凑 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+            gap: 10px;                   /* 子元素之间的间距 */
+            padding: 0 20px;             /* 左右内边距，增加可读性 */
+        }
+
+        /* 左侧导航栏样式
+         * 用途：设置左侧导航栏的样式
+         */
+        .left-nav {
+            flex: 0 0 auto;              /* 不伸缩，保持固定宽度 */
+            width: 15%;                  /* 固定为整个网页宽度的15% */
+            min-width: 150px;            /* 最小宽度限制，确保导航项有足够空间显示 */
+            max-width: 300px;            /* 最大宽度限制，避免导航栏过宽 */
+            background-color: transparent;  /* 透明背景 */
+            padding: 10px;               /* 内边距（上下左右） */
+            margin-left: 0;              /* 左外边距为0，确保紧贴左侧 */
+            position: sticky;            /* 粘性定位 */
+            top: 20px;                  /* 距离顶部20px */
+            height: calc(100vh - 40px);  /* 高度为视口高度减去40px */
+            overflow-y: auto;            /* 垂直滚动 */
+            display: none;               /* 默认隐藏 */
+            text-align: left;            /* 左对齐 */
+            transition: width 0.3s ease;  /* 添加宽度变化的过渡效果，使变化更平滑 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+        }
+
+        /* 左侧导航栏标题样式
+         * 用途：设置左侧导航栏标题的样式
+         */
+        .left-nav-title {
+            font-size: 18px;             /* 字体大小 */
+            color: #0066cc;              /* 蓝色文字 */
+            margin-bottom: 15px;         /* 下方外边距 */
+            text-align: center;          /* 居中对齐 */
+            font-weight: bold;           /* 粗体 */
+        }
+
+        /* 导航项样式
+         * 用途：设置导航项的基础样式
+         */
+        .nav-item {
+            display: block;              /* 块级元素 */
+            padding: 4px 8px;            /* 内边距 */
+            margin-bottom: 3px;          /* 下方外边距 */
+            cursor: default;             /* 默认鼠标样式 */
+            transition: none;            /* 无过渡效果 */
+            font-size: 16px;             /* 字体大小 */
+            color: #333333;              /* 文字颜色 */
+            text-decoration: none;       /* 无文字装饰 */
+            white-space: nowrap;         /* 不换行 */
+            overflow: hidden;            /* 溢出隐藏 */
+            text-overflow: ellipsis;     /* 溢出显示省略号 */
+        }
+
+        /* 导航项悬停效果
+         * 用途：设置导航项悬停时的样式
+         */
+        .nav-item:hover {
+            color: #333333;              /* 保持文字颜色 */
+            text-decoration: none;       /* 无文字装饰 */
+        }
+
+        /* 导航项标题级别样式
+         * 用途：设置不同级别导航项的缩进
+         */
+        .nav-item.h1 { margin-left: 0;    }  /* 1级标题无缩进 */
+        .nav-item.h2 { margin-left: 10px;  }  /* 2级标题缩进10px */
+        .nav-item.h3 { margin-left: 20px;  }  /* 3级标题缩进20px */
+        .nav-item.h4 { margin-left: 30px;  }  /* 4级标题缩进30px */
+        .nav-item.h5 { margin-left: 40px;  }  /* 5级标题缩进40px */
+        .nav-item.h6 { margin-left: 50px;  }  /* 6级标题缩进50px */
+
+        /* 卡片容器样式
+         * 用途：设置卡片容器的布局样式
+         */
+        .card-container {
+            display: grid;               /* 使用网格布局 */
+            grid-gap: 20px;              /* 网格间距 */
+            grid-template-columns: 1fr;  /* 单列布局 */
+            flex: 1;                     /* 弹性布局占满剩余空间 */
+            min-width: 0;                /* 允许收缩到0，确保在窄屏幕上不会导致溢出 */
+            margin: 0 auto 20px !important;  /* 居中显示，下方外边距 */
+            padding: 0 30px;             /* 左右内边距，增加可读性，确保圆角显示 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+            overflow-x: auto;            /* 必要时显示水平滚动条 */
+            max-width: calc(100% - 160px);  /* 最大宽度，确保不与导航栏重叠 */
+        }
+
+        /* 基础卡片样式
+         * 用途：设置所有卡片的基础样式
+         */
+        .base-card {
+            border-radius: 18px;         /* 圆角 */
+            box-shadow: var(--box-shadow);  /* 使用阴影变量 */
+            padding: 35px;               /* 内边距 */
+            width: 100%;                 /* 宽度100%，跟随容器宽度变化 */
+            box-sizing: border-box;      /* 盒模型设置为border-box */
+        }
+
+        /* 标题卡片样式 - H1级别
+         * 用途：设置1级标题卡片的特定样式
+         */
+        .title-card-h1 {
+            background: #81c7ff;         /* 浅蓝色背景 */
+            text-align: left;            /* 左对齐 */
+            border-left: 5px solid #007bff;  /* 蓝色左侧边框 */
+            padding: 25px;               /* 内边距 */
+        }
+
+        /* 标题卡片样式 - H2级别
+         * 用途：设置2级标题卡片的特定样式
+         */
+        .title-card-h2 {
+            background: #a7d8ff;         /* 淡蓝色背景 */
+            text-align: left;            /* 左对齐 */
+            border-left: 5px solid #6c757d;  /* 灰色左侧边框 */
+            padding: 25px;               /* 内边距 */
+        }
+
+        /* 标题卡片样式 - H3级别
+         * 用途：设置3级标题卡片的特定样式
+         */
+        .title-card-h3 {
+            background: #cce5ff;         /* 极淡蓝色背景 */
+            text-align: left;            /* 左对齐 */
+            border-left: 5px solid #28a745;  /* 绿色左侧边框 */
+            padding: 25px;               /* 内边距 */
+        }
+
+        /* 内容卡片样式 - 共享样式
+         * 用途：设置所有内容卡片的共享样式
+         */
+        .list-card, .table-card, .para-card, .img-card {
+            background: var(--card-bg-light);  /* 使用浅色卡片背景变量 */
+        }
+
+        /* 列表卡片样式
+         * 用途：设置列表卡片的特定样式
+         */
+        .list-card {
+            padding-left: 80px;          /* 左侧内边距，增加列表缩进 */
+        }
+
+        /* 表格卡片样式
+         * 用途：设置表格卡片的特定样式
+         */
+        .table-card {
+            overflow-x: auto;            /* 水平滚动，适应宽表格 */
+        }
+
+        /* 图片卡片样式
+         * 用途：设置图片卡片的特定样式
+         */
+        .img-card {
+            text-align: center;          /* 图片居中显示 */
+        }
+
+        /* 标题样式 - 共享样式
+         * 用途：设置所有标题的共享样式
+         */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--primary-font);  /* 使用主要字体族 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+            margin-bottom: 0;            /* 无下方外边距 */
+            font-weight: bold;           /* 粗体 */
+        }
+
+        /* 标题样式 - 字体大小
+         * 用途：设置不同级别标题的字体大小
+         */
+        h1 { font-size: 1.875em; }  /* 1级标题字体大小 */
+        h2 { font-size: 1.75em; }   /* 2级标题字体大小 */
+        h3 { font-size: 1.625em; }  /* 3级标题字体大小 */
+        h4 { font-size: 1.5em; }    /* 4级标题字体大小 */
+        h5 { font-size: 1.375em; }  /* 5级标题字体大小 */
+        h6 { font-size: 1.25em; }   /* 6级标题字体大小 */
+
+        /* 列表样式 - 共享样式
+         * 用途：设置无序列表和有序列表的共享样式
+         */
+        ul,
+        ol {
+            padding: 0 0 0 50px;         /* 左侧内边距，列表缩进 */
+            margin: 0;                   /* 无外边距 */
+        }
+
+        /* 列表项样式
+         * 用途：设置所有列表项的样式
+         */
+        li {
+            margin-bottom: 8px;          /* 下方外边距，列表项间距 */
+            font-size: 1.125em;          /* 字体大小 */
+            color: #333;                 /* 文字颜色 */
+            line-height: 1.8;            /* 行高 */
+        }
+
+        /* 无序列表项样式
+         * 用途：设置无序列表项的样式
+         */
+        ul>li {
+            list-style-type: disc;       /* 圆形列表标记 */
+            padding-left: 10px;          /* 左侧内边距 */
+        }
+
+        /* 嵌套无序列表项样式
+         * 用途：设置一级嵌套无序列表项的样式
+         */
+        ul>li ul>li {
+            list-style-type: circle;      /* 空心圆形列表标记 */
+        }
+
+        /* 深层嵌套无序列表项样式
+         * 用途：设置二级及以上嵌套无序列表项的样式
+         */
+        ul>li ul>li ul>li {
+            list-style-type: square;      /* 方形列表标记 */
+        }
+
+        /* 有序列表项样式
+         * 用途：设置有序列表项的样式
+         */
+        ol>li {
+            list-style-type: decimal;     /* 数字列表标记 */
+            padding-left: 10px;          /* 左侧内边距 */
+        }
+
+        /* 表格样式
+         * 用途：设置表格的基本样式
+         */
+        table {
+            width: 100%;                 /* 宽度100% */
+            border-collapse: collapse;   /* 边框合并 */
+            border-radius: var(--border-radius);  /* 使用圆角变量 */
+            overflow: hidden;            /* 溢出隐藏，配合圆角 */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);  /* 轻微阴影 */
+            margin: 0;                   /* 无外边距 */
+        }
+
+        /* 表格表头样式
+         * 用途：设置表格表头的样式
+         */
+        th {
+            background-color: #6c757d;   /* 灰色背景 */
+            color: #ffffff;              /* 白色文字 */
+            padding: 12px;               /* 内边距 */
+            border: 2px solid #fff;      /* 白色边框 */
+            font-size: 1.125em;          /* 字体大小 */
+            line-height: 1.8;            /* 行高 */
+        }
+
+        /* 表格单元格样式
+         * 用途：设置表格单元格的样式
+         */
+        td {
+            padding: 10px;               /* 内边距 */
+            border: 2px solid #f1f9f9;   /* 浅色边框 */
+            background-color: #f8f9fa;    /* 极浅灰色背景 */
+            font-size: 1.125em;          /* 字体大小 */
+            line-height: 1.8;            /* 行高 */
+        }
+
+        /* 表格偶数行样式
+         * 用途：设置表格偶数行的交替背景色
+         */
+        tr:nth-child(even) td {
+            background-color: #e8f4f8;    /* 浅蓝色背景 */
+        }
+
+        /* 表格对齐样式 - 左对齐
+         * 用途：设置表格内容左对齐
+         */
+        .text-left {
+            text-align: left;            /* 左对齐 */
+        }
+
+        /* 表格对齐样式 - 居中对齐
+         * 用途：设置表格内容居中对齐
+         */
+        .text-center {
+            text-align: center;          /* 居中对齐 */
+        }
+
+        /* 表格对齐样式 - 右对齐
+         * 用途：设置表格内容右对齐
+         */
+        .text-right {
+            text-align: right;           /* 右对齐 */
+        }
+
+        /* 图片样式
+         * 用途：设置图片的基本样式
+         */
+        img {
+            max-width: 100%;             /* 最大宽度100%，适应容器 */
+            border-radius: 10px;         /* 圆角 */
+            transition: transform 0.3s ease;  /* 变换过渡效果 */
+            border: 3px solid #ffeaa7;    /* 黄色边框 */
+            margin: 0;                   /* 无外边距 */
+        }
+
+        /* 图片悬停效果
+         * 用途：设置图片悬停时的缩放效果
+         */
+        img:hover {
+            transform: scale(1.05);       /* 放大1.05倍 */
+        }
+
+        /* 语音朗读图标样式
+         * 用途：设置语音朗读图标的样式
+         */
+        .audio-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        /* 语音朗读图标悬停效果
+         * 用途：设置语音朗读图标悬停时的样式
+         */
+        .audio-icon:hover {
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 为卡片添加相对定位，确保语音图标定位正确
+         * 用途：确保语音朗读图标相对于卡片定位
+         */
+        .base-card {
+            position: relative;
+        }
+
+        /* 段落样式
+         * 用途：设置段落的基本样式
+         */
+        p {
+            margin: 0;                   /* 无外边距 */
+            line-height: 1.6;            /* 行高 */
+            font-size: 1.125em;          /* 字体大小 */
+        }
+
+        /* 自定义对话框样式
+         * 用途：设置自定义对话框的基本样式
+         */
+        .custom-dialog {
+            position: fixed;             /* 固定定位 */
+            top: 0;                      /* 顶部对齐 */
+            left: 0;                     /* 左侧对齐 */
+            width: 100%;                 /* 宽度100% */
+            height: 100%;                /* 高度100% */
+            background-color: rgba(0, 0, 0, 0.5);  /* 半透明黑色背景 */
+            display: none;               /* 默认隐藏 */
+            justify-content: center;     /* 水平居中 */
+            align-items: center;         /* 垂直居中 */
+            z-index: 2000;               /* 高z-index，确保在最上层 */
+        }
+
+        /* 对话框显示状态
+         * 用途：设置对话框显示时的样式
+         */
+        .custom-dialog.show {
+            display: flex;               /* 显示对话框（flex布局） */
+        }
+
+        /* 对话框内容容器样式
+         * 用途：设置对话框内容的样式
+         */
+        .dialog-content {
+            background-color: white;     /* 白色背景 */
+            border-radius: 8px;          /* 圆角 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);  /* 阴影 */
+            width: 90%;                  /* 宽度90% */
+            max-width: 500px;            /* 最大宽度500px */
+            overflow: hidden;            /* 溢出隐藏 */
+            animation: dialogSlideIn 0.3s ease-out;  /* 滑入动画 */
+        }
+
+        /* 对话框滑入动画
+         * 用途：设置对话框显示时的动画效果
+         */
+        @keyframes dialogSlideIn {
+            from {
+                opacity: 0;              /* 初始透明度0 */
+                transform: translateY(-30px) scale(0.9);  /* 向上偏移30px，缩小到0.9倍 */
+            }
+
+            to {
+                opacity: 1;              /* 最终透明度1 */
+                transform: translateY(0) scale(1);  /* 回到原位，正常大小 */
+            }
+        }
+
+        /* 对话框头部样式
+         * 用途：设置对话框头部的样式
+         */
+        .dialog-header {
+            background-color: #4CAF50;    /* 绿色背景 */
+            color: white;                /* 白色文字 */
+            padding: 15px 20px;          /* 内边距 */
+            display: flex;               /* flex布局 */
+            justify-content: space-between;  /* 两端对齐 */
+            align-items: center;         /* 垂直居中 */
+        }
+
+        /* 对话框标题样式
+         * 用途：设置对话框标题的样式
+         */
+        .dialog-title {
+            font-size: 18px;             /* 字体大小 */
+            font-weight: bold;           /* 粗体 */
+            color: white;                /* 白色文字 */
+            margin: 0;                   /* 无外边距 */
+        }
+
+        /* 对话框关闭按钮样式
+         * 用途：设置对话框关闭按钮的样式
+         */
+        .dialog-close-btn {
+            background: none;            /* 无背景 */
+            border: none;               /* 无边框 */
+            color: white;                /* 白色文字 */
+            font-size: 20px;             /* 字体大小 */
+            cursor: pointer;            /* 鼠标悬停时显示指针 */
+            padding: 0;                  /* 无内边距 */
+            width: 24px;                 /* 宽度 */
+            height: 24px;                /* 高度 */
+            display: flex;               /* flex布局 */
+            align-items: center;         /* 垂直居中 */
+            justify-content: center;     /* 水平居中 */
+        }
+
+        /* 对话框关闭按钮悬停效果
+         * 用途：设置对话框关闭按钮悬停时的样式
+         */
+        .dialog-close-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);  /* 半透明白色背景 */
+            border-radius: 50%;           /* 圆形 */
+        }
+
+        /* 对话框内容区域样式
+         * 用途：设置对话框内容区域的样式
+         */
+        .dialog-body {
+            padding: 30px 20px;          /* 内边距 */
+            text-align: center;          /* 居中对齐 */
+        }
+
+        /* 对话框消息样式
+         * 用途：设置对话框消息的样式
+         */
+        .dialog-message {
+            font-size: 16px;             /* 字体大小 */
+            color: #27ae60;              /* 绿色文字 */
+            line-height: 1.5;            /* 行高 */
+            margin: 0;                   /* 无外边距 */
+        }
+
+        /* 对话框底部样式
+         * 用途：设置对话框底部的样式
+         */
+        .dialog-footer {
+            padding: 0 20px 20px;        /* 内边距 */
+            display: flex;               /* flex布局 */
+            justify-content: center;     /* 水平居中 */
+        }
+
+        /* 对话框按钮基础样式
+         * 用途：设置对话框按钮的基础样式
+         */
+        .dialog-btn {
+            padding: 10px 30px;          /* 内边距 */
+            border: none;               /* 无边框 */
+            border-radius: 4px;          /* 圆角 */
+            font-size: 16px;             /* 字体大小 */
+            cursor: pointer;            /* 鼠标悬停时显示指针 */
+            transition: all 0.3s ease;   /* 所有属性的过渡效果 */
+            min-width: 100px;            /* 最小宽度100px */
+        }
+
+        /* 对话框主要按钮样式
+         * 用途：设置对话框主要按钮的特定样式
+         */
+        .dialog-btn-primary {
+            background-color: #4CAF50;    /* 绿色背景 */
+            color: white;                /* 白色文字 */
+        }
+
+        /* 对话框主要按钮悬停效果
+         * 用途：设置对话框主要按钮悬停时的样式
+         */
+        .dialog-btn-primary:hover {
+            background-color: #45a049;    /* 深绿色背景 */
+            transform: translateY(-2px);  /* 向上移动2px */
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);  /* 绿色阴影 */
+        }
+
+        /* 标题级别选择容器样式
+         * 用途：设置标题级别选择区域的样式
+         */
+        .title-level-container {
+            margin-bottom: 15px;         /* 下方外边距 */
+        }
+
+        /* 标题级别选择标签样式
+         * 用途：设置标题级别选择标签的样式
+         */
+        .title-level-label {
+            font-size: 18px;             /* 字体大小 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+            margin-right: 10px;         /* 右侧外边距 */
+        }
+
+        /* 标题级别选择下拉菜单样式
+         * 用途：设置标题级别选择下拉菜单的样式
+         */
+        #title-level-select {
+            padding: 8px 12px;           /* 内边距 */
+            border: 2px solid #0066cc;    /* 蓝色边框 */
+            border-radius: var(--border-radius);  /* 使用圆角变量 */
+            font-size: 16px;             /* 字体大小 */
+            background-color: white;      /* 白色背景 */
+            color: var(--primary-color);  /* 使用主要颜色变量 */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 自定义对话框 -->
+    <div id="custom-dialog" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <div class="dialog-title">提示</div>
+                <button id="dialog-close" class="dialog-close-btn">×</button>
+            </div>
+            <div class="dialog-body">
+                <div class="dialog-message">文件保存成功！</div>
+            </div>
+            <div class="dialog-footer">
+                <button id="dialog-confirm" class="dialog-btn dialog-btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <h1 class="page-title">Markdown文本阅读助手</h1>
+    </div>
+
+    <!-- 固定浮动按钮容器 -->
+    <div class="floating-buttons">
+        <button class="floating-btn back-btn" id="back-btn" style="display: none;" onclick="showAllAreas();" title="返回输入界面">🏃‍♂️</button>
+        <button class="floating-btn top-btn" id="top-btn" style="display: none;" onclick="scrollToTop();" title="返回页面顶端">🚀</button>
+        <button class="floating-btn bold-btn" id="bold-btn" style="display: none;" title="切换内容加粗显示">💪</button>
+        <button class="floating-btn theme-btn" id="theme-btn" style="display: none;" onclick="toggleTheme();" title="切换卡片配色方案">🎨</button>
+        <button class="floating-btn font-btn" id="font-btn" style="display: none;" onclick="toggleFontSize();" title="切换文字大小">🔍</button>
+        <button class="floating-btn nav-toggle-btn" id="nav-toggle-btn" style="display: none;" onclick="toggleLeftNav();" title="切换左侧导航栏显示">📑</button>
+        <button class="floating-btn position-btn" id="position-btn" style="display: none;" onclick="toggleButtonPosition();" title="切换按钮位置">🔄</button>
+    </div>
+
+    <div class="input-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 class="input-title" id="input-title">上传Markdown文档或直接粘贴Markdown格式的文本</h2>
+            <div id="score-display" style="font-size: 24px; font-weight: bold; color: #0066cc;">积分：0</div>
+        </div>
+        
+        <textarea id="markdown-input" placeholder="请在此粘贴Markdown格式的文本，或拖拽.md文件到此处..."></textarea>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <!-- 标题级别选择 -->
+            <div class="title-level-container">
+                <label for="title-level-select" class="title-level-label">标题级别范围：</label>
+                <select id="title-level-select" class="title-level-select">
+                    <option value="1-3">1-3级</option>
+                    <option value="1-4" selected>1-4级</option>
+                    <option value="1-5">1-5级</option>
+                    <option value="1-6">1-6级</option>
+                </select>
+            </div>
+            
+            <!-- 按钮区域 -->
+            <div style="display: flex; gap: 10px;">
+                <input type="file" id="file-input" accept=".md" style="display: none;">
+                <button class="btn upload-btn" id="reading-assist-btn">辅助阅读</button>
+                <button class="btn upload-btn" onclick="document.getElementById('file-input').click();">读取MD文档</button>
+                <button class="btn upload-btn" id="generate-btn">转换可视化网页</button>
+                <button class="btn upload-btn" id="clear-btn">清空输入</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-section" id="preview-section">
+        <div class="left-nav" id="left-nav">
+            <div class="left-nav-title">文档导航</div>
+            <div id="nav-container"></div>
+        </div>
+        <div class="card-container" id="card-container"></div>
+    </div>
+
+    <!-- 辅助阅读弹窗 -->
+    <div id="reading-assist-modal" class="custom-dialog">
+        <div class="dialog-content" style="width: 95%; max-width: none;">
+            <div style="background-color: #f8f9fa; border-radius: 12px; padding: 40px; min-height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <!-- 上两行上下文 -->
+                <div id="context-top" style="text-align: center; width: 100%; margin-bottom: 30px; font-size: 20px; color: #666;">
+                    <!-- 每行将通过JavaScript动态添加 -->
+                </div>
+
+                <!-- 当前行 -->
+                <p id="current-line" style="font-size: 48px; font-weight: bold; text-align: center; width: 100%; margin-bottom: 30px; line-height: 1.4;"></p>
+
+                <!-- 下两行上下文 -->
+                <div id="context-bottom" style="text-align: center; width: 100%; font-size: 20px; color: #666;">
+                    <!-- 每行将通过JavaScript动态添加 -->
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 0 30px 20px;">
+                <div style="font-size: 16px; color: #666;">
+                    <span id="line-number">第 1 行</span> / <span id="total-lines">共 0 行</span>
+                </div>
+                <div style="font-size: 16px; color: #666;">
+                    <span>使用方向键或PgUp/PgDn导航，Esc退出</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let markdownInput;
+        let previewSection;
+        let cardContainer;
+        let leftNav;
+        let fileInput;
+        let titleElement;
+        let originalFileName = '';
+        let dialogElement;
+        let dialogConfirm;
+        let dialogIcon;
+        let dialogTitle;
+        let dialogMessage;
+        let navContainer;
+        let titleLevelSelect;
+        let inputSection;
+        let backBtn;
+        let topBtn;
+        let boldBtn;
+        let themeBtn;
+        let fontBtn;
+        let navToggleBtn;
+        let positionBtn;
+        let readingAssistBtn;
+        let readingAssistModal;
+        let currentLineDisplay;
+        let contextTop;
+        let contextBottom;
+        let lineNumberDisplay;
+        let totalLinesDisplay;
+        let closeReadingAssistBtn;
+        let isTextBold = false;
+        let isHighlightActive = false; // 记录是否处于高亮状态
+        
+        // 辅助阅读功能相关变量
+        let currentLineIndex = 0;
+        let allLines = [];
+        let isFullWidthMode = true;
+        
+        // 初始化积分显示
+        function initScoreDisplay() {
+            const scoreDisplay = document.getElementById('score-display');
+            const quizScore = localStorage.getItem('quizScore');
+            if (quizScore) {
+                scoreDisplay.textContent = `积分：${quizScore}`;
+            }
+        }
+        let currentTheme = 0; // 0: 启动默认主题, 1: 默认主题, 2: 亮色主题, 3: 夜间主题
+        let currentFontSize = 2; // 0: 小, 1: 较小, 2: 默认, 3: 较大, 4: 大
+        let baseFontSize = 100; // 基础字体大小百分比
+        let isButtonsHorizontal = false; // 按钮是否水平排列，默认false（垂直排列）
+        let isNavVisible = true; // 左侧导航栏是否可见，默认true
+        
+        // 主题配置
+        const themes = [
+            {
+                name: '启动默认主题',
+                cardBg: '#fffde7',
+                cardBorder: '#ffeaa7',
+                cardShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                textColor: '#333333',
+                previewBg: '#f0f8ff'
+            },
+            {
+                name: '默认主题',
+                cardBg: '#ffffff',
+                cardBorder: '#b2bec3',
+                cardShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                textColor: '#2d3436',
+                previewBg: '#f5f6fa'
+            },
+            {
+                name: '亮色主题',
+                cardBg: '#fff3cd',
+                cardBorder: '#ffeaa7',
+                cardShadow: '0 4px 12px rgba(255, 193, 7, 0.2)',
+                textColor: '#856404',
+                previewBg: '#fffbeb'
+            },
+            {
+                name: '夜间主题',
+                cardBg: '#2d3436',
+                cardBorder: '#636e72',
+                cardShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                textColor: '#dfe6e9',
+                navTitleColor: '#ffffff',
+                previewBg: '#1e272e'
+            }
+        ];
+
+        // 初始化函数
+        function init() {
+            // 初始化全局变量
+            markdownInput = document.getElementById('markdown-input');
+            previewSection = document.getElementById('preview-section');
+            cardContainer = document.getElementById('card-container');
+            leftNav = document.getElementById('left-nav');
+            fileInput = document.getElementById('file-input');
+            titleElement = document.getElementById('input-title');
+            dialogElement = document.getElementById('custom-dialog');
+            dialogConfirm = document.getElementById('dialog-confirm');
+            dialogTitle = dialogElement?.querySelector('.dialog-title');
+            dialogMessage = dialogElement?.querySelector('.dialog-message');
+            const dialogClose = document.getElementById('dialog-close');
+            if (dialogClose) {
+                dialogClose.addEventListener('click', function () {
+                    if (dialogElement) {
+                        dialogElement.classList.remove('show');
+                    }
+                });
+            }
+            navContainer = document.getElementById('nav-container');
+            titleLevelSelect = document.getElementById('title-level-select');
+            inputSection = document.getElementsByClassName('input-section')[0];
+            backBtn = document.getElementById('back-btn');
+            topBtn = document.getElementById('top-btn');
+            boldBtn = document.getElementById('bold-btn');
+            themeBtn = document.getElementById('theme-btn');
+            fontBtn = document.getElementById('font-btn');
+            navToggleBtn = document.getElementById('nav-toggle-btn');
+            positionBtn = document.getElementById('position-btn');
+            readingAssistBtn = document.getElementById('reading-assist-btn');
+            readingAssistModal = document.getElementById('reading-assist-modal');
+            currentLineDisplay = document.getElementById('current-line');
+            contextTop = document.getElementById('context-top');
+            contextBottom = document.getElementById('context-bottom');
+            lineNumberDisplay = document.getElementById('line-number');
+            totalLinesDisplay = document.getElementById('total-lines');
+            closeReadingAssistBtn = document.getElementById('close-reading-assist');
+
+            // 初始化时确保按钮隐藏
+            if (topBtn) {
+                topBtn.style.display = 'none';
+            }
+            if (boldBtn) {
+                boldBtn.style.display = 'none';
+            }
+            if (themeBtn) {
+                themeBtn.style.display = 'none';
+            }
+            if (fontBtn) {
+                fontBtn.style.display = 'none';
+            }
+
+            // 绑定文件输入事件
+            if (fileInput) {
+                fileInput.addEventListener('change', function (e) {
+                    handleFiles(e.target.files);
+                });
+            }
+
+            // 绑定生成按钮事件
+            const generateBtn = document.getElementById('generate-btn');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', generateHTML);
+            }
+
+            // 绑定清空按钮事件
+            const clearBtn = document.getElementById('clear-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    if (markdownInput) {
+                        markdownInput.value = '';
+                    }
+                    if (titleElement) {
+                        titleElement.innerHTML = '上传Markdown文档或直接粘贴Markdown格式的文本';
+                    }
+                    originalFileName = '';
+                    if (previewSection) {
+                        previewSection.style.display = 'none';
+                    }
+                });
+            }
+
+            // 绑定拖放事件
+            if (markdownInput) {
+                markdownInput.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+
+                markdownInput.addEventListener('dragleave', function (e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                });
+
+                markdownInput.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length) {
+                        handleFiles(e.dataTransfer.files);
+                    }
+                });
+            }
+
+            // 初始化对话框
+            initCustomDialog();
+            
+            // 初始化积分显示
+            initScoreDisplay();
+            
+            // 为bold-btn添加事件监听器
+            if (boldBtn) {
+                boldBtn.addEventListener('click', function(event) {
+                    toggleBoldText(event);
+                });
+            }
+            
+            // 为辅助阅读按钮添加事件监听器
+            if (readingAssistBtn) {
+                readingAssistBtn.addEventListener('click', function() {
+                    startReadingAssist();
+                });
+            }
+            
+            // 为关闭辅助阅读按钮添加事件监听器
+            if (closeReadingAssistBtn) {
+                closeReadingAssistBtn.addEventListener('click', function() {
+                    closeReadingAssist();
+                });
+            }
+            
+            // 为辅助阅读弹窗添加点击外部关闭事件
+            if (readingAssistModal) {
+                readingAssistModal.addEventListener('click', function(event) {
+                    if (event.target === readingAssistModal) {
+                        closeReadingAssist();
+                    }
+                });
+                
+                // 为辅助阅读弹窗添加鼠标滚轮事件，实现前后切换句子
+                readingAssistModal.addEventListener('wheel', function(event) {
+                    // 阻止默认的滚轮行为，防止页面滚动
+                    event.preventDefault();
+                    
+                    // 根据滚轮方向显示上一行或下一行
+                    if (event.deltaY < 0) {
+                        // 往上滚动，显示上一句
+                        showPreviousLine();
+                    } else {
+                        // 往下滚动，显示下一句
+                        showNextLine();
+                    }
+                });
+            }
+        }
+        
+        /**
+         * 启动辅助阅读功能
+         * 功能性说明：启动文档辅助阅读功能，显示宽屏朗读界面
+         * 处理流程：
+         * 1. 获取Markdown输入内容
+         * 2. 检查内容是否为空
+         * 3. 处理Markdown内容，去除格式标记
+         * 4. 按行分割内容
+         * 5. 显示辅助阅读弹窗
+         * 6. 显示第一行内容
+         * 7. 添加键盘事件监听
+         */
+        function startReadingAssist() {
+            // 确保markdownInput已初始化
+            if (!markdownInput) {
+                markdownInput = document.getElementById('markdown-input');
+            }
+            
+            const mdContent = markdownInput.value.trim();
+            if (!mdContent) {
+                showCustomDialog('提示', '还没有输入Markdown内容呢，快填一填吧~', 'info');
+                return;
+            }
+            
+            // 处理Markdown内容，去除格式标记
+            const rawLines = mdContent.split('\n');
+            
+            // 处理每一行：去除MarkDown格式标记并按标点符号切分句子
+            let processedLines = [];
+            rawLines.forEach(line => {
+                let cleanedLine = line.trim();
+                
+                // 去除各级标题标记 #
+                cleanedLine = cleanedLine.replace(/^#+\s*/g, '').trim();
+                
+                // 去除粗体标记 **text** 或 __text__
+                cleanedLine = cleanedLine.replace(/\*\*(.*?)\*\*/g, '$1');
+                cleanedLine = cleanedLine.replace(/__(.*?)__/g, '$1');
+                
+                // 去除斜体标记 *text* 或 _text_
+                cleanedLine = cleanedLine.replace(/\*(.*?)\*/g, '$1');
+                cleanedLine = cleanedLine.replace(/_(.*?)_/g, '$1');
+                
+                // 去除删除线标记 ~~text~~
+                cleanedLine = cleanedLine.replace(/~~(.*?)~~/g, '$1');
+                
+                // 去除代码块标记 `code` 或 ```code```
+                cleanedLine = cleanedLine.replace(/`{3}([\s\S]*?)`{3}/g, '$1');
+                cleanedLine = cleanedLine.replace(/`([^`]+)`/g, '$1');
+                
+                // 去除无序列表标记 - 或 * 或 +
+                cleanedLine = cleanedLine.replace(/^[\-\*\+]\s+/g, '').trim();
+                
+                // 去除有序列表标记 1. 2. 等
+                cleanedLine = cleanedLine.replace(/^\d+\.\s+/g, '').trim();
+                
+                // 去除引用标记 >
+                cleanedLine = cleanedLine.replace(/^>\s*/g, '').trim();
+                
+                // 只处理非空行
+                if (cleanedLine) {
+                    // 按标点符号切分句子：句号（。）问号（？）感叹号（！）分号（；）省略号（……）
+                    const sentences = cleanedLine.split(/([。？！；……])/).filter(Boolean);
+                    
+                    // 重组句子，确保标点符号与句子内容在一起
+                    for (let i = 0; i < sentences.length; i += 2) {
+                        if (sentences[i] && (i + 1 < sentences.length)) {
+                            processedLines.push(sentences[i] + sentences[i + 1]);
+                        } else if (sentences[i]) {
+                            processedLines.push(sentences[i]);
+                        }
+                    }
+                }
+            });
+            
+            // 过滤空行和长度小于10个字符的句子
+            allLines = processedLines.filter(line => {
+                const trimmedLine = line.trim();
+                return trimmedLine && trimmedLine.length >= 10;
+            });
+            
+            if (allLines.length === 0) {
+                showCustomDialog('提示', '无法识别文档中的内容，请检查输入格式', 'info');
+                return;
+            }
+            
+            currentLineIndex = 0;
+            
+            // 显示辅助阅读弹窗
+            if (readingAssistModal) {
+                readingAssistModal.classList.add('show');
+            }
+            
+            // 显示第一行
+            showCurrentLine();
+            
+            // 添加键盘事件监听
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        
+        /**
+         * 显示当前行
+         * 功能性说明：在辅助阅读弹窗中显示当前行及其上下文
+         * 处理流程：
+         * 1. 检查是否有行数据
+         * 2. 确保当前行索引在有效范围内
+         * 3. 显示当前行内容
+         * 4. 显示上两行和下两行上下文
+         * 5. 更新行号显示
+         */
+        function showCurrentLine() {
+            if (allLines.length === 0) return;
+            
+            currentLineIndex = Math.max(0, Math.min(currentLineIndex, allLines.length - 1));
+            const currentLine = allLines[currentLineIndex];
+            
+            // 显示当前行
+            if (currentLineDisplay) {
+                currentLineDisplay.textContent = currentLine;
+            }
+            
+            // 显示上两行上下文
+            if (contextTop) {
+                if (currentLineIndex > 0) {
+                    const startIndex = Math.max(0, currentLineIndex - 2);
+                    const topLines = allLines.slice(startIndex, currentLineIndex);
+                    const topContextHTML = topLines.map(line => {
+                        return `<div>${line}</div>`;
+                    }).join('');
+                    contextTop.innerHTML = topContextHTML;
+                } else {
+                    contextTop.innerHTML = '';
+                }
+            }
+            
+            // 显示下两行上下文
+            if (contextBottom) {
+                if (currentLineIndex < allLines.length - 1) {
+                    const endIndex = Math.min(allLines.length, currentLineIndex + 3);
+                    const bottomLines = allLines.slice(currentLineIndex + 1, endIndex);
+                    const bottomContextHTML = bottomLines.map(line => {
+                        return `<div>${line}</div>`;
+                    }).join('');
+                    contextBottom.innerHTML = bottomContextHTML;
+                } else {
+                    contextBottom.innerHTML = '';
+                }
+            }
+            
+            // 更新行号显示
+            if (lineNumberDisplay) {
+                lineNumberDisplay.textContent = `第 ${currentLineIndex + 1} 行`;
+            }
+            if (totalLinesDisplay) {
+                totalLinesDisplay.textContent = `共 ${allLines.length} 行`;
+            }
+        }
+        
+        /**
+         * 显示下一行
+         * 功能性说明：显示当前行的下一行
+         */
+        function showNextLine() {
+            if (currentLineIndex < allLines.length - 1) {
+                currentLineIndex++;
+                showCurrentLine();
+            }
+        }
+        
+        /**
+         * 显示上一行
+         * 功能性说明：显示当前行的上一行
+         */
+        function showPreviousLine() {
+            if (currentLineIndex > 0) {
+                currentLineIndex--;
+                showCurrentLine();
+            }
+        }
+        
+        /**
+         * 键盘事件处理
+         * 功能性说明：处理键盘导航事件
+         */
+        function handleKeyDown(event) {
+            switch (event.key) {
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                case 'PageUp':
+                    showPreviousLine();
+                    event.preventDefault();
+                    break;
+                case 'ArrowDown':
+                case 'ArrowRight':
+                case 'PageDown':
+                    showNextLine();
+                    event.preventDefault();
+                    break;
+                case 'Escape':
+                    closeReadingAssist();
+                    break;
+                case 'Home':
+                    // 移至第1行
+                    currentLineIndex = 0;
+                    showCurrentLine();
+                    event.preventDefault();
+                    break;
+                case 'End':
+                    // 移至最后一行
+                    currentLineIndex = allLines.length - 1;
+                    showCurrentLine();
+                    event.preventDefault();
+                    break;
+            }
+        }
+        
+        /**
+         * 关闭辅助阅读
+         * 功能性说明：关闭辅助阅读弹窗并清理事件监听器
+         */
+        function closeReadingAssist() {
+            if (readingAssistModal) {
+                readingAssistModal.classList.remove('show');
+            }
+            document.removeEventListener('keydown', handleKeyDown);
+        }
+
+        /**
+         * 初始化自定义对话框
+         * 功能性说明：初始化自定义对话框的关闭按钮事件
+         * 处理流程：
+         * 1. 使用缓存的dialogConfirm元素
+         * 2. 为其添加点击事件，点击时隐藏对话框
+         * 与界面元素的关联：
+         * - dialog-confirm：对话框的确认按钮
+         * - custom-dialog：自定义对话框
+         * 操作使用方法：页面加载时自动调用
+         */
+        function initCustomDialog() {
+            if (dialogConfirm) {
+                dialogConfirm.addEventListener('click', function () {
+                    if (dialogElement) {
+                        dialogElement.classList.remove('show');
+                    }
+                });
+            }
+        }
+
+        /**
+         * 显示自定义对话框
+         * 功能性说明：显示自定义对话框，用于显示提示信息、错误信息等
+         * 处理流程：
+         * 1. 使用缓存的对话框元素
+         * 2. 设置对话框的图标、标题和消息内容
+         * 3. 根据类型设置图标样式
+         * 4. 添加show类显示对话框
+         * 与界面元素的关联：
+         * - custom-dialog：自定义对话框
+         * - dialog-icon：对话框图标
+         * - dialog-title：对话框标题
+         * - dialog-message：对话框消息
+         * 操作使用方法：在需要显示提示信息时调用
+         */
+        function showCustomDialog(title, message, type = 'info') {
+            if (!dialogElement) return;
+
+            if (dialogTitle) dialogTitle.textContent = title;
+            if (dialogMessage) dialogMessage.textContent = message;
+
+            // 根据类型设置消息颜色
+            if (dialogMessage) {
+                switch (type) {
+                    case 'success':
+                        dialogMessage.style.color = '#27ae60';
+                        break;
+                    case 'error':
+                        dialogMessage.style.color = '#e74c3c';
+                        break;
+                    case 'warning':
+                        dialogMessage.style.color = '#f39c12';
+                        break;
+                    case 'info':
+                    default:
+                        dialogMessage.style.color = '#27ae60';
+                        break;
+                }
+            }
+
+            dialogElement.classList.add('show');
+        }
+
+        /**
+         * 处理文件上传
+         * 功能性说明：读取并处理上传的Markdown文件
+         * 处理流程：
+         * 1. 获取第一个上传的文件
+         * 2. 检查文件是否为.md格式
+         * 3. 使用FileReader读取文件内容
+         * 4. 读取完成后将内容显示在输入框中
+         * 5. 自动触发生成卡片
+         * 6. 更新提示语显示成功读取的文件名
+         * 与界面元素的关联：
+         * - markdown-input：文本输入框，用于显示文件内容
+         * - 标题元素：显示成功读取的文件名
+         * 操作使用方法：通过拖放文件或点击"读取MD文档"按钮触发
+         */
+        function handleFiles(files) {
+            // 检查参数
+            if (!files || files.length === 0) {
+                showCustomDialog('错误', '未选择文件，请重试~', 'error');
+                return;
+            }
+
+            // 只处理第一个文件
+            const file = files[0];
+
+            if (!file) {
+                showCustomDialog('错误', '文件无效，请重试~', 'error');
+                return;
+            }
+
+            if (file.name.endsWith('.md')) {
+                originalFileName = file.name.replace(/\.md$/, '');
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    // 确保markdownInput已初始化
+                    if (!markdownInput) {
+                        markdownInput = document.getElementById('markdown-input');
+                    }
+                    
+                    if (markdownInput) {
+                        markdownInput.value = e.target.result;
+                        // 文件加载完成后自动触发生成卡片
+                        setTimeout(() => {
+                            autoGenerateCards();
+                        }, 500); // 延迟500ms确保内容已加载
+                        // 更新提示语，显示成功读取的文件名
+                        if (!titleElement) {
+                            titleElement = document.getElementById('input-title');
+                        }
+                        if (titleElement) {
+                            titleElement.innerHTML = `上传Markdown文档或直接粘贴Markdown格式的文本 <span style="color: #28a745; font-weight: normal;">(${file.name})</span>`;
+                        }
+                    }
+                };
+                reader.onerror = function () {
+                    showCustomDialog('文件读取失败', '请重试~', 'error');
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                showCustomDialog('格式错误', '只能上传.md格式的Markdown文件哦~', 'warning');
+            }
+        }
+
+        /**
+         * 自动生成卡片并隐藏非核心区域
+         * 功能性说明：在文件上传后自动生成卡片并隐藏输入区域等非核心内容
+         * 处理流程：
+         * 1. 调用generateHTML函数生成卡片
+         * 2. 延迟1秒后调用hideOtherAreas函数隐藏非核心区域
+         * 与界面元素的关联：
+         * - 输入区域
+         * - 预览区域
+         * 操作使用方法：文件上传完成后自动调用
+         */
+        function autoGenerateCards() {
+            // 直接调用生成HTML函数，避免模拟点击
+            generateHTML();
+
+            // 生成完成后自动隐藏非核心区域
+            setTimeout(() => {
+                hideOtherAreas();
+            }, 1000);
+        }
+
+        /**
+         * 隐藏非核心区域
+         * 功能性说明：隐藏输入区域等非核心内容，只显示预览区域
+         * 处理流程：
+         * 1. 隐藏输入区域
+         * 2. 显示预览区域（如果有内容）
+         * 与界面元素的关联：
+         * - input-section：隐藏输入区域
+         * - preview-section：显示预览区域
+         * 操作使用方法：在生成卡片后自动调用
+         */
+        function hideOtherAreas() {
+            // 隐藏输入区域并显示预览区域（如果有内容），确保互斥显示
+            if (inputSection) inputSection.style.display = 'none';
+            
+            if (previewSection && cardContainer && cardContainer.innerHTML.trim() !== '') {
+                previewSection.style.display = 'flex';
+            }
+
+            // 显示返回按钮、返回顶部按钮、加粗按钮、主题按钮、字体大小按钮和位置按钮
+            if (backBtn) {
+                backBtn.style.display = 'flex';
+            }
+            if (topBtn) {
+                topBtn.style.display = 'flex';
+            }
+            if (boldBtn) {
+                boldBtn.style.display = 'flex';
+            }
+            if (themeBtn) {
+                themeBtn.style.display = 'flex';
+            }
+            if (fontBtn) {
+                fontBtn.style.display = 'flex';
+            }
+            if (navToggleBtn) {
+                navToggleBtn.style.display = 'flex';
+            }
+            if (positionBtn) {
+                positionBtn.style.display = 'flex';
+            }
+        }
+
+        /**
+         * 显示所有区域
+         * 功能性说明：显示输入区域等所有内容，隐藏预览区域
+         * 处理流程：
+         * 1. 显示输入区域
+         * 2. 隐藏预览区域
+         * 3. 平滑滚动到页面顶部
+         * 与界面元素的关联：
+         * - input-section：显示输入区域
+         * - preview-section：隐藏预览区域
+         * 操作使用方法：点击"返回输入"按钮触发
+         */
+        function showAllAreas() {
+            // 显示输入区域并隐藏预览区域，确保互斥显示
+            if (inputSection) inputSection.style.display = 'block';
+            
+            if (previewSection) previewSection.style.display = 'none';
+
+            // 平滑滚动到页面最顶部
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+
+            // 隐藏返回按钮、返回顶部按钮、加粗按钮、主题按钮、字体大小按钮和位置按钮
+            if (backBtn) {
+                backBtn.style.display = 'none';
+            }
+            if (topBtn) {
+                topBtn.style.display = 'none';
+            }
+            if (boldBtn) {
+                boldBtn.style.display = 'none';
+            }
+            if (themeBtn) {
+                themeBtn.style.display = 'none';
+            }
+            if (fontBtn) {
+                fontBtn.style.display = 'none';
+            }
+            if (positionBtn) {
+                positionBtn.style.display = 'none';
+            }
+        }
+
+        /**
+         * 获取用户选择的标题级别范围
+         * 功能性说明：获取用户在下拉菜单中选择的标题级别范围
+         * 处理流程：
+         * 1. 使用缓存的titleLevelSelect元素
+         * 2. 获取其value值
+         * 3. 将value值分割并转换为数字
+         * 4. 返回包含minLevel和maxLevel的对象
+         * 与界面元素的关联：
+         * - title-level-select：标题级别选择下拉菜单
+         * 操作使用方法：在生成导航栏和卡片时自动调用
+         */
+        function getTitleLevelRange() {
+            if (!titleLevelSelect) {
+                // 如果元素不存在，返回默认值
+                return { minLevel: 1, maxLevel: 4 };
+            }
+            const rangeValue = titleLevelSelect.value;
+            if (!rangeValue) {
+                // 如果值不存在，返回默认值
+                return { minLevel: 1, maxLevel: 4 };
+            }
+            const [minLevel, maxLevel] = rangeValue.split('-').map(Number);
+            return { minLevel, maxLevel };
+        }
+
+        /**
+         * 获取标题图标
+         * 功能性说明：获取标题对应的图标
+         * 处理流程：直接返回空字符串
+         * 与界面元素的关联：用于标题卡片中的图标显示
+         * 操作使用方法：在convertToFlatCards和generateLeftNav函数中自动调用
+         */
+        function getTitleIcon(level, titleText) {
+            return '';
+        }
+
+        /**
+         * 生成卡片HTML
+         * 功能性说明：根据节点类型生成对应的卡片HTML
+         * 处理流程：
+         * 1. 根据节点类型和属性确定卡片类型
+         * 2. 生成对应的卡片HTML字符串
+         * 3. 为每个卡片添加语音朗读图标
+         * 与界面元素的关联：
+         * - 生成的卡片HTML将显示在card-container中
+         * 操作使用方法：在convertToFlatCards函数中自动调用
+         */
+        function generateCardHTML(node, currentTitleId) {
+            let cardClass = 'para-card';
+            let cardContent = '';
+            let cardId = '';
+
+            if (node.tagName.match(/H[1-6]/)) {
+                const level = parseInt(node.tagName.replace('H', ''));
+                const titleText = node.textContent.trim();
+                const icon = getTitleIcon(level, titleText);
+                cardClass = level <= 3 ? `title-card-h${level}` : 'title-card-h3';
+                cardId = `section-h${level}-${titleText.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '-')}`;
+                cardContent = `
+                    <${node.tagName.toLowerCase()}>${icon} ${titleText}</${node.tagName.toLowerCase()}>
+                `;
+            } else if (node.tagName === 'UL' || node.tagName === 'OL') {
+                const listType = node.tagName.toLowerCase();
+                cardClass = 'list-card';
+                cardContent = `<${listType}>${node.innerHTML}</${listType}>`;
+                cardId = `list-card-${Math.random().toString(36).substr(2, 9)}`;
+            } else if (node.tagName === 'TABLE') {
+                cardClass = 'table-card';
+                cardContent = node.outerHTML;
+                cardId = `table-card-${Math.random().toString(36).substr(2, 9)}`;
+            } else if (node.tagName === 'IMG') {
+                cardClass = 'img-card';
+                cardContent = `<img src="${node.src || ''}" alt="${node.alt || ''}">`;
+                cardId = `img-card-${Math.random().toString(36).substr(2, 9)}`;
+            } else if (node.tagName === 'P') {
+                let paraHTML = node.innerHTML.trim();
+                if (!paraHTML) return '';
+                cardContent = `<p>${paraHTML}</p>`;
+                cardId = `para-card-${Math.random().toString(36).substr(2, 9)}`;
+            } else {
+                // 处理其他所有类型的节点
+                cardContent = node.outerHTML;
+                cardId = `other-card-${Math.random().toString(36).substr(2, 9)}`;
+            }
+
+            // 为非图片卡片添加语音朗读图标
+            let audioIcon = '';
+            if (node.tagName !== 'IMG') {
+                audioIcon = `
+                    <div class="audio-icon" onclick="readCardContent('${cardId}')" title="朗读卡片内容">🔊</div>
+                `;
+            }
+
+            return `
+                <div class="base-card ${cardClass}" id="${cardId}" data-related-title="${currentTitleId}">
+                    ${cardContent}
+                    ${audioIcon}
+                </div>
+            `;
+        }
+
+        /**
+         * 生成卡通卡片HTML
+         * 功能性说明：将Markdown内容转换为卡通卡片格式的HTML，并显示在预览区域
+         * 处理流程：
+         * 1. 获取markdown-input中的内容并检查是否为空
+         * 2. 配置Showdown转换器
+         * 3. 将Markdown内容转换为原始HTML
+         * 4. 调用convertToFlatCards将原始HTML转换为卡片格式
+         * 5. 调用generateLeftNav生成导航栏
+         * 6. 将生成的卡片HTML显示在card-container中
+         * 7. 显示预览区域和导航栏
+         * 8. 启用下载按钮
+         * 与界面元素的关联：
+         * - markdown-input：Markdown文本输入框
+         * - card-container：卡片容器，用于显示生成的卡片
+         * - preview-section：预览区域
+         * - left-nav：左侧导航栏
+         * 操作使用方法：点击"转换可视化网页"按钮触发
+         */
+        function generateHTML() {
+            try {
+                // 确保markdownInput已初始化
+                if (!markdownInput) {
+                    markdownInput = document.getElementById('markdown-input');
+                }
+                
+                if (!markdownInput) {
+                    showCustomDialog('错误', '无法找到输入框元素，请刷新页面重试~', 'error');
+                    return;
+                }
+
+                const mdContent = markdownInput.value.trim();
+                if (!mdContent) {
+                    showCustomDialog('提示', '还没有输入Markdown内容呢，快填一填吧~', 'info');
+                    return;
+                }
+
+                // 确保marked库已加载
+                if (!window.marked) {
+                    showCustomDialog('错误', 'marked库未加载，请刷新页面重试~', 'error');
+                    return;
+                }
+
+                // 使用marked解析Markdown为HTML（关键：避免marked误解析公式中的特殊字符）
+                let rawHTML = marked.parse(mdContent, {
+                    // 配置marked：启用GitHub Flavored Markdown（推荐开启，兼容性更好）
+                    gfm: true,
+                    // 换行符转换为<br>
+                    breaks: true
+                });
+                
+                console.log('转换后的HTML:', rawHTML);
+
+                // 转换为卡片格式
+                let finalHTML = convertToFlatCards(rawHTML);
+                
+                console.log('转换为卡片格式后的HTML:', finalHTML);
+
+                // 确保元素已初始化
+                if (!cardContainer) {
+                    cardContainer = document.getElementById('card-container');
+                }
+                if (!previewSection) {
+                    previewSection = document.getElementById('preview-section');
+                }
+                if (!leftNav) {
+                    leftNav = document.getElementById('left-nav');
+                }
+                if (!navContainer) {
+                    navContainer = document.getElementById('nav-container');
+                }
+
+                // 生成导航栏内容
+                generateLeftNav(rawHTML);
+
+                // 插入卡片内容
+                if (cardContainer) cardContainer.innerHTML = finalHTML;
+
+                // 先显示预览区域和导航栏
+                if (previewSection) previewSection.style.display = 'flex';
+                if (leftNav) leftNav.style.display = 'block';
+
+                // 隐藏初始操作界面，显示预览区域
+                hideOtherAreas();
+
+                // 触发MathJax渲染公式（解决动态插入HTML后公式未渲染的问题）
+                if (window.MathJax) {
+                    // 使用requestAnimationFrame确保DOM已经更新完成
+                    requestAnimationFrame(() => {
+                        console.log('开始MathJax渲染');
+                        console.log('当前cardContainer内容:', cardContainer.innerHTML);
+                        // 强制重新渲染整个页面
+                        MathJax.texReset();
+                        MathJax.typesetPromise([cardContainer]).then(() => {
+                            console.log('MathJax渲染完成');
+                        }).catch(err => {
+                            console.error('MathJax渲染出错：', err);
+                        });
+                    });
+                }
+
+            } catch (error) {
+                console.error('生成卡片出错：', error);
+                showCustomDialog('生成失败', `错误原因：${error.message}，请检查输入内容或刷新页面重试~`, 'error');
+            }
+        }
+
+        /**
+         * 转换为卡片格式
+         * 功能性说明：将原始HTML转换为卡片格式的HTML
+         * 处理流程：
+         * 1. 使用DOMParser解析原始HTML
+         * 2. 获取用户选择的标题级别范围
+         * 3. 初始化变量，包括卡片HTML字符串、当前标题ID
+         * 4. 遍历body的所有子节点
+         * 5. 对不同类型的节点调用generateCardHTML生成对应的卡片HTML
+         * 6. 返回生成的卡片HTML字符串
+         * 与界面元素的关联：
+         * - 生成的卡片HTML将显示在card-container中
+         * 操作使用方法：在generateHTML函数中自动调用
+         */
+        function convertToFlatCards(rawHTML) {
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(rawHTML, 'text/html');
+                const body = doc.body;
+
+                // 获取用户选择的标题级别范围
+                const { minLevel, maxLevel } = getTitleLevelRange();
+
+                let cardHTML = '';
+                let currentTitleId = '';
+
+                if (body) {
+                    Array.from(body.childNodes).forEach(node => {
+                        if (node.nodeType !== 1) return;
+
+                        // 对于标题节点，更新当前标题ID
+                        if (node.tagName.match(/H[1-6]/)) {
+                            const level = parseInt(node.tagName.replace('H', ''));
+                            const titleText = node.textContent.trim();
+                            const titleId = `section-h${level}-${titleText.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '-')}`;
+                            currentTitleId = titleId;
+                        }
+
+                        // 使用generateCardHTML函数生成卡片
+                        const card = generateCardHTML(node, currentTitleId);
+                        if (card) cardHTML += card;
+                    });
+                }
+
+                return cardHTML;
+            } catch (error) {
+                console.error('转换卡片格式出错：', error);
+                showCustomDialog('转换失败', `错误原因：${error.message}，请检查输入内容或刷新页面重试~`, 'error');
+                return '';
+            }
+        }
+
+        /**
+         * 生成左侧导航栏
+         * 功能性说明：根据Markdown内容生成左侧导航栏
+         * 处理流程：
+         * 1. 使用DOMParser解析原始HTML
+         * 2. 获取用户选择的标题级别范围
+         * 3. 遍历body中的所有标题节点
+         * 4. 对每个标题生成对应的导航项
+         * 5. 将生成的导航项HTML显示在nav-container中
+         * 与界面元素的关联：
+         * - nav-container：导航栏容器，用于显示生成的导航项
+         * 操作使用方法：在generateHTML函数中自动调用
+         */
+        function generateLeftNav(rawHTML) {
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(rawHTML, 'text/html');
+                const body = doc.body;
+
+                // 获取用户选择的标题级别范围
+                const { minLevel, maxLevel } = getTitleLevelRange();
+
+                let navHTML = '';
+
+                if (body) {
+                    Array.from(body.childNodes).forEach(node => {
+                        if (node.nodeType !== 1) return;
+
+                        if (node.tagName.match(/H[1-6]/)) {
+                            const level = parseInt(node.tagName.replace('H', ''));
+                            const titleText = node.textContent.trim();
+                            const levelStr = `h${level}`;
+                            const icon = getTitleIcon(level, titleText);
+
+                            // 仅处理在用户选择范围内的标题
+                            if (level >= minLevel && level <= maxLevel) {
+                                const titleId = `section-h${level}-${titleText.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '-')}`;
+
+                                navHTML += `
+                                    <a href="#${titleId}" class="nav-item ${levelStr}" title="${titleText}">
+                                        ${icon} ${titleText}
+                                    </a>
+                                `;
+                            }
+                        }
+                    });
+                }
+
+                if (navContainer) {
+                    navContainer.innerHTML = navHTML;
+                }
+            } catch (error) {
+                console.error('生成导航栏出错：', error);
+                showCustomDialog('生成导航栏失败', `错误原因：${error.message}，请检查输入内容或刷新页面重试~`, 'error');
+            }
+        }
+
+        /**
+         * 返回页面顶部
+         * 功能性说明：平滑滚动到页面顶部
+         * 处理流程：
+         * 1. 使用window.scrollTo方法，设置behavior为smooth实现平滑滚动
+         * 2. 设置top为0，滚动到页面顶部
+         * 操作使用方法：点击返回顶部按钮触发
+         */
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        /**
+         * 朗读卡片内容
+         * 功能性说明：使用Web Speech API朗读指定卡片的内容
+         * 处理流程：
+         * 1. 获取卡片元素
+         * 2. 提取卡片中的文本内容
+         * 3. 使用Web Speech API的SpeechSynthesis接口朗读文本
+         * 4. 处理可能的错误和边界情况
+         * 操作使用方法：点击卡片上的语音朗读图标触发
+         */
+        function readCardContent(cardId) {
+            // 获取卡片元素
+            const cardElement = document.getElementById(cardId);
+            if (!cardElement) {
+                console.error('找不到卡片元素:', cardId);
+                return;
+            }
+
+            // 提取卡片中的文本内容，排除语音图标本身
+            const textContent = cardElement.textContent.replace('🔊', '').trim();
+            if (!textContent) {
+                showCustomDialog('提示', '该卡片没有可朗读的内容', 'info');
+                return;
+            }
+
+            // 检查浏览器是否支持Web Speech API
+            if (!('speechSynthesis' in window)) {
+                showCustomDialog('错误', '您的浏览器不支持语音朗读功能', 'error');
+                return;
+            }
+
+            // 停止当前正在播放的语音
+            window.speechSynthesis.cancel();
+
+            // 创建语音实例
+            const speech = new SpeechSynthesisUtterance(textContent);
+            
+            // 设置语音属性
+            speech.lang = 'zh-CN'; // 使用中文朗读
+            speech.rate = 1;       // 朗读速度
+            speech.pitch = 1;      // 语音音调
+            speech.volume = 1;     // 音量
+
+            // 开始朗读
+            window.speechSynthesis.speak(speech);
+        }
+
+        /**
+         * 切换内容加粗显示或高亮词组
+         * 功能性说明：当直接点击时不检查系统剪切板，只有当点击按钮的同时按下Ctrl键时，才检查系统剪切板，并作相应处理。第一次按下Ctrl+点击时，根据系统剪切板上是否有文字，如果有则提取后重新渲染网页，同时设置内存变量记录渲染状态，如果没有文字则正常切换加粗显示；第二次按下Ctrl+点击时检查内存变量记录的渲染状态，如果目前是高亮状态，则删除系统剪切板内容，清除内存变量，同时重新渲染网页以恢复正常显示
+         * 处理流程：
+         * 1. 检查是否处于高亮状态
+         * 2. 如果处于高亮状态，清除高亮并恢复正常显示
+         * 3. 如果不处于高亮状态，检查是否按下了Ctrl键
+         * 4. 如果按下了Ctrl键，检查剪切板内容
+         * 5. 如果剪切板有内容，提取后高亮显示并设置高亮状态
+         * 6. 如果没有按下Ctrl键或剪切板没有内容，正常切换加粗显示
+         * 操作使用方法：点击加粗按钮触发，按下Ctrl键同时点击时检查剪切板
+         */
+        function toggleBoldText(event) {
+            // 检查是否处于高亮状态
+            if (isHighlightActive) {
+                // 第二次点击，清除高亮状态
+                // 清除高亮
+                removeHighlights();
+                // 清除内存变量
+                isHighlightActive = false;
+                return;
+            }
+            
+            // 检查是否按下了Ctrl键
+            const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
+            
+            if (isCtrlPressed) {
+                // 按下了Ctrl键，检查剪切板内容
+                navigator.clipboard.readText()
+                    .then(text => {
+                        if (text && text.trim()) {
+                            // 剪切板有内容，提取以空格分隔的词组
+                            const phrases = text.trim().split(/\s+/).filter(phrase => phrase.length > 0);
+                            if (phrases.length > 0) {
+                                // 高亮显示词组
+                                highlightPhrases(phrases);
+                                // 设置高亮状态
+                                isHighlightActive = true;
+                                return;
+                            }
+                        }
+                        
+                        // 剪切板没有内容，执行原有的加粗功能
+                        toggleBold();
+                    })
+                    .catch(err => {
+                        console.error('无法读取剪切板内容:', err);
+                        // 读取剪切板失败，执行原有的加粗功能
+                        toggleBold();
+                    });
+            } else {
+                // 没有按下Ctrl键，直接执行加粗功能
+                toggleBold();
+            }
+        }
+        
+        /**
+         * 切换加粗显示
+         * 功能性说明：切换网页中除标题以外的内容是否加粗显示，同时切换导航栏标题的加粗状态
+         * 处理流程：
+         * 1. 切换加粗状态
+         * 2. 遍历卡片容器中的所有元素，应用或移除加粗样式
+         * 3. 对导航栏标题应用或移除加粗样式
+         * 操作使用方法：在toggleBoldText函数中调用
+         */
+        function toggleBold() {
+            // 切换加粗状态
+            isTextBold = !isTextBold;
+            
+            // 遍历卡片容器中的所有元素
+            if (cardContainer) {
+                const elements = cardContainer.querySelectorAll('*');
+                elements.forEach(element => {
+                    // 跳过标题元素
+                    if (!element.tagName.match(/^H[1-6]$/)) {
+                        if (isTextBold) {
+                            element.style.fontWeight = 'bold';
+                        } else {
+                            element.style.fontWeight = '';
+                        }
+                    }
+                });
+            }
+            
+            // 切换导航栏标题的加粗状态
+            if (leftNav) {
+                // 直接获取导航栏标题元素
+                const navTitle = leftNav.querySelector('.left-nav-title');
+                if (navTitle) {
+                    if (isTextBold) {
+                        navTitle.style.fontWeight = 'bold';
+                    } else {
+                        navTitle.style.fontWeight = '';
+                    }
+                }
+            }
+        }
+        
+        /**
+         * 高亮显示词组
+         * 功能性说明：在网页中高亮显示指定的词组
+         * 处理流程：
+         * 1. 移除之前的高亮
+         * 2. 遍历卡片容器中的所有元素
+         * 3. 对每个元素，检查是否包含要高亮的词组
+         * 4. 如果包含，创建新的元素和高亮元素，替换原有的元素
+         * 操作使用方法：在toggleBoldText函数中调用
+         */
+        function highlightPhrases(phrases) {
+            if (!cardContainer) return;
+            
+            // 移除之前的高亮
+            removeHighlights();
+            
+            // 遍历所有元素，包括文本节点
+            function traverse(element) {
+                // 跳过标题元素
+                if (element.tagName && element.tagName.match(/^H[1-6]$/)) {
+                    return;
+                }
+                
+                // 跳过已经高亮的元素
+                if (element.classList && element.classList.contains('highlight')) {
+                    return;
+                }
+                
+                // 处理文本节点
+                if (element.nodeType === Node.TEXT_NODE && element.textContent.trim()) {
+                    const text = element.textContent;
+                    let newContent = text;
+                    
+                    // 对每个词组进行高亮处理
+                    phrases.forEach(phrase => {
+                        if (phrase && phrase.length > 0) {
+                            // 创建正则表达式，全局匹配词组
+                            const regex = new RegExp(`(${phrase})`, 'gi');
+                            // 替换为高亮元素
+                            newContent = newContent.replace(regex, '<span class="highlight">$1</span>');
+                        }
+                    });
+                    
+                    // 如果内容有变化，替换节点
+                    if (newContent !== text) {
+                        const span = document.createElement('span');
+                        span.innerHTML = newContent;
+                        element.parentNode.replaceChild(span, element);
+                        
+                        // 遍历新创建的span元素的子节点
+                        Array.from(span.childNodes).forEach(child => {
+                            traverse(child);
+                        });
+                    }
+                } 
+                // 处理元素节点
+                else if (element.nodeType === Node.ELEMENT_NODE) {
+                    // 遍历子节点
+                    Array.from(element.childNodes).forEach(child => {
+                        traverse(child);
+                    });
+                }
+            }
+            
+            // 开始遍历
+            Array.from(cardContainer.childNodes).forEach(child => {
+                traverse(child);
+            });
+        }
+        
+        /**
+         * 移除高亮
+         * 功能性说明：移除网页中的所有高亮效果
+         * 处理流程：
+         * 1. 查找所有带有highlight类的元素
+         * 2. 对每个高亮元素，将其内容替换为纯文本
+         * 操作使用方法：在highlightPhrases函数中调用
+         */
+        function removeHighlights() {
+            if (!cardContainer) return;
+            
+            const highlights = cardContainer.querySelectorAll('.highlight');
+            highlights.forEach(highlight => {
+                const text = highlight.textContent;
+                const textNode = document.createTextNode(text);
+                highlight.parentNode.replaceChild(textNode, highlight);
+            });
+        }
+
+        /**
+         * 切换卡片配色方案
+         * 功能性说明：切换网页中卡片的配色方案，包括三种主题：默认主题、亮色主题和夜间主题
+         * 处理流程：
+         * 1. 切换currentTheme变量的状态，循环遍历三个主题
+         * 2. 根据当前主题获取对应的主题配置
+         * 3. 应用主题样式到卡片容器和卡片元素
+         * 4. 应用主题样式到导航栏文字
+         * 5. 更新主题按钮的提示信息
+         * 操作使用方法：点击主题按钮触发
+         */
+        function toggleTheme() {
+            // 切换主题状态，循环遍历四种主题
+            currentTheme = (currentTheme + 1) % themes.length;
+            
+            // 获取当前主题配置
+            const theme = themes[currentTheme];
+            
+            // 应用主题样式到预览区域
+            if (previewSection) {
+                previewSection.style.backgroundColor = theme.previewBg;
+            }
+            
+            // 应用主题样式到所有卡片
+            if (cardContainer) {
+                const cards = cardContainer.querySelectorAll('.base-card');
+                cards.forEach(card => {
+                    card.style.backgroundColor = theme.cardBg;
+                    card.style.border = `3px solid ${theme.cardBorder}`;
+                    card.style.boxShadow = theme.cardShadow;
+                    
+                    // 应用文字颜色到卡片内的所有元素
+                    const cardElements = card.querySelectorAll('*');
+                    cardElements.forEach(element => {
+                        element.style.color = theme.textColor;
+                    });
+                });
+            }
+            
+            // 应用主题样式到导航栏文字
+            if (leftNav) {
+                const navElements = leftNav.querySelectorAll('*');
+                navElements.forEach(element => {
+                    // 检查元素是否是导航栏标题
+                    if (element.classList.contains('left-nav-title')) {
+                        // 对于导航栏标题，使用navTitleColor（如果存在）或默认的textColor
+                        element.style.color = theme.navTitleColor || theme.textColor;
+                    } else {
+                        // 对于其他导航栏元素，使用默认的textColor
+                        element.style.color = theme.textColor;
+                    }
+                });
+            }
+            
+            // 更新主题按钮的提示信息
+            if (themeBtn) {
+                themeBtn.title = `切换卡片配色方案 (当前: ${theme.name})`;
+            }
+        }
+
+        /**
+         * 切换文字大小
+         * 功能性说明：切换网页中各个区域文字的大小，按每次增大或减小5%的比例循环，共设置5个不同档次
+         * 处理流程：
+         * 1. 切换currentFontSize变量的状态，循环遍历5个档次
+         * 2. 根据当前字体大小档次计算新的字体大小百分比
+         * 3. 应用字体大小样式到预览区域和所有卡片
+         * 4. 应用字体大小样式到导航栏文字
+         * 5. 更新字体大小按钮的提示信息
+         * 操作使用方法：点击字体大小按钮触发
+         */
+        function toggleFontSize() {
+            // 切换字体大小状态，循环遍历5个档次
+            currentFontSize = (currentFontSize + 1) % 5;
+            
+            // 计算当前字体大小百分比
+            const fontSizePercent = baseFontSize + (currentFontSize - 2) * 5;
+            
+            // 应用字体大小样式到预览区域
+            if (previewSection) {
+                previewSection.style.fontSize = `${fontSizePercent}%`;
+            }
+            
+            // 应用字体大小样式到所有卡片
+            if (cardContainer) {
+                const cards = cardContainer.querySelectorAll('.base-card');
+                cards.forEach(card => {
+                    card.style.fontSize = `${fontSizePercent}%`;
+                });
+            }
+            
+            // 应用字体大小样式到导航栏文字
+            if (leftNav) {
+                leftNav.style.fontSize = `${fontSizePercent}%`;
+            }
+            
+            // 更新字体大小按钮的提示信息
+            if (fontBtn) {
+                const fontSizeLevels = ['小', '较小', '默认', '较大', '大'];
+                fontBtn.title = `切换文字大小 (当前: ${fontSizeLevels[currentFontSize]})`;
+            }
+        }
+
+        /**
+         * 切换按钮位置
+         * 功能性说明：切换浮动按钮的显示位置，在垂直排列和水平排列之间切换
+         * 处理流程：
+         * 1. 切换isButtonsHorizontal变量的状态
+         * 2. 获取浮动按钮容器元素
+         * 3. 根据当前状态设置容器的样式
+         * 4. 更新位置按钮的提示信息
+         * 操作使用方法：点击位置按钮触发
+         */
+        function toggleButtonPosition() {
+            // 切换按钮位置状态
+            isButtonsHorizontal = !isButtonsHorizontal;
+            
+            // 获取浮动按钮容器元素
+            const floatingButtons = document.querySelector('.floating-buttons');
+            if (floatingButtons) {
+                if (isButtonsHorizontal) {
+                    // 设置为水平排列（右下角）
+                    floatingButtons.style.flexDirection = 'row';
+                    floatingButtons.style.right = '5px';
+                    floatingButtons.style.left = 'auto';
+                    floatingButtons.style.transform = 'none';
+                    floatingButtons.style.bottom = '5px';
+                } else {
+                    // 设置为垂直排列（右下角）
+                    floatingButtons.style.flexDirection = 'column';
+                    floatingButtons.style.right = '5px';
+                    floatingButtons.style.left = 'auto';
+                    floatingButtons.style.transform = 'none';
+                    floatingButtons.style.bottom = '5px';
+                }
+            }
+            
+            // 更新位置按钮的提示信息
+            if (positionBtn) {
+                if (isButtonsHorizontal) {
+                    positionBtn.title = '切换按钮位置 (当前: 底部水平排列)';
+                } else {
+                    positionBtn.title = '切换按钮位置 (当前: 右下角垂直排列)';
+                }
+            }
+        }
+
+        /**
+         * 切换左侧导航栏显示状态
+         * 功能性说明：切换左侧导航栏的显示和隐藏
+         * 处理流程：
+         * 1. 切换isNavVisible状态
+         * 2. 根据状态显示或隐藏左侧导航栏
+         * 3. 更新导航栏切换按钮的提示信息
+         * 与界面元素的关联：
+         * - left-nav：左侧导航栏
+         * - nav-toggle-btn：导航栏切换按钮
+         * 操作使用方法：点击导航栏切换按钮触发
+         */
+        function toggleLeftNav() {
+            // 切换导航栏显示状态
+            isNavVisible = !isNavVisible;
+            
+            // 根据状态显示或隐藏左侧导航栏
+            if (leftNav) {
+                if (isNavVisible) {
+                    leftNav.style.display = 'block';
+                } else {
+                    leftNav.style.display = 'none';
+                }
+            }
+            
+            // 更新导航栏切换按钮的提示信息
+            if (navToggleBtn) {
+                if (isNavVisible) {
+                    navToggleBtn.title = '切换左侧导航栏显示 (当前: 显示)';
+                } else {
+                    navToggleBtn.title = '切换左侧导航栏显示 (当前: 隐藏)';
+                }
+            }
+        }
+
+        // 初始化页面
+        window.onload = init;
+    </script>
+</body>
+
+</html>
